@@ -22,13 +22,13 @@
 //#include "verification.h"
 namespace sbwt {
 
-struct BuidlIndexRawData{
-	BuidlIndexRawData();
-	BuidlIndexRawData(char*, size_t, const uint32_t &, const uint32_t&);
-	~BuidlIndexRawData();
+struct BuildIndexRawData{
+	BuildIndexRawData();
+	BuildIndexRawData(char*, size_t, const uint32_t &, const uint32_t&);
+	~BuildIndexRawData();
 	char *seq_raw;			/* Reference sequence */
 	char *seq_transformed;		/* Transformed reference sequence */
-	uint32_t **occurency;		/* Occurency of A/C/G/T */
+	uint32_t **occurrence;		/* occurrence of A/C/G/T */
 	uint32_t *suffix_array;		/* Suffix array */
 	uint32_t first_coloumn[4];	/* C in the formula, the first column of sbwt matrix*/
 	uint32_t length_ref;		/* Length of reference sequence */
@@ -37,8 +37,22 @@ struct BuidlIndexRawData{
 	uint32_t period;		/* The period for sbwt. 1 is used for normal bwt */
 };
 
-void SbwtSort(char*, uint32_t*, uint32_t, uint32_t, uint32_t, const uint32_t&, const uint32_t&);
+void SortSbwt(char*, uint32_t*, uint32_t, uint32_t, uint32_t, const uint32_t&, const uint32_t&);
+inline void VectorSwap(uint32_t, uint32_t, uint32_t, uint32_t*);
+void SortSbwt(BuildIndexRawData &);
+void Transform(BuildIndexRawData &);
+void CountOccourrence(BuildIndexRawData &);
+void BuildIndex(BuildIndexRawData &);
+void PrintFullSearchMatrix(BuildIndexRawData&);
 
+#ifndef SNIPPET_COUNTOCC
+#define SNIPPET_COUNTOCC() {\
+        O[0][i] = O[0][i-1];\
+        O[1][i] = O[1][i-1];\
+        O[2][i] = O[2][i-1];\
+        O[3][i] = O[3][i-1];\
+}
+#endif /* SNIPPET_COUNTOCC */
 
 } /* namespace sbwt */
 #endif /* _SBWT_H_ */
