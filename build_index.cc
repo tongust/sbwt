@@ -4,7 +4,7 @@
 
 #include "log.h"
 #include "sbwt.h"
-
+#include "const.h"
 
 using std::string;
 using std::cout;
@@ -13,7 +13,6 @@ using std::endl;
 int main(int argc, char **argv)
 {
         logger::LogDebug("Test of Build-Index\n");
-
 
         string dna = "ACGCATGATAGCAATGATAGTAGCTA";
 

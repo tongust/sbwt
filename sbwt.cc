@@ -91,8 +91,8 @@ void VectorSwap(uint32_t i, uint32_t j, uint32_t n, uint32_t* seq_index)
                 seq_index[i] = seq_index[j];
                 seq_index[j] = tmpval;
 
-                i++;
-                j++;
+                ++i;
+                ++j;
         }
         return;
 }
@@ -137,9 +137,9 @@ void SortSbwt(
 				seq_index[a] = seq_index[b];
 				seq_index[b] = tmpval;
 
-				a++;
+				++a;
 			}
-			b++;
+			++b;
 		}
 
 		while (
@@ -152,9 +152,9 @@ void SortSbwt(
 				seq_index[c] = seq_index[d];
 				seq_index[d] = tmpval;
 				
-				d--;
+				--d;
 			}
-			c--;
+			--c;
 		}
 		if (b > c) break;
 
@@ -162,8 +162,8 @@ void SortSbwt(
 		tmpval = seq_index[b];
 		seq_index[b] = seq_index[c];
 		seq_index[c] = tmpval;
-		b++;
-		c--;
+		++b;
+		--c;
 	}
 
         int64_t t0 = a - begin;
@@ -227,15 +227,15 @@ void CountOccourrence(BuildIndexRawData &build_index) {
         switch (B[0]) {
                 case 'A':
                         O[0][0] = 1;
-                        C[0]++;
+                        ++C[0];
                         break;
                 case 'C':
                         O[1][0] = 1;
-                        C[1]++;
+                        ++C[1];
                         break;
                 case 'G':
                         O[2][0] = 1;
-                        C[2]++;
+                        ++C[2];
                         break;
                 case 'T':
                         O[3][0] = 1;
@@ -246,22 +246,22 @@ void CountOccourrence(BuildIndexRawData &build_index) {
 
         for (size_t i = 1; i < N; ++i) {
         switch (B[i]) {
-                case 'A': 
+                case 'A':
                         SNIPPET_COUNTOCC();
-                        C[0]++;
+                        ++C[0];
                         O[0][i] = O[0][i-1] + 1;
                         break;
-                case 'C': 
+                case 'C':
                         SNIPPET_COUNTOCC();
-                        C[1]++;
+                        ++C[1];
                         O[1][i] = O[1][i-1] + 1;
                         break;
-                case 'G': 
+                case 'G':
                         SNIPPET_COUNTOCC();
-                        C[2]++;
+                        ++C[2];
                         O[2][i] = O[2][i-1] + 1;
                         break;
-                case 'T': 
+                case 'T':
                         SNIPPET_COUNTOCC();
                         O[3][i] = O[3][i-1] + 1;
                         break;
@@ -270,10 +270,11 @@ void CountOccourrence(BuildIndexRawData &build_index) {
                         break;
                 }
         }
-        C[3]=C[0]+C[1]+C[2];
-        C[2]=C[0]+C[1];
-        C[1]=C[0];
-        C[0]=0;
+        C[3] = C[0] + C[1] + C[2];
+        C[2] = C[0] + C[1];
+        C[1] = C[0];
+        C[0] = 0;
+
         return;
 }
 
@@ -346,7 +347,7 @@ void PrintFullSearchMatrix(BuildIndexRawData &build_index) {
         }
         cout << B[N-1] << "\n";
         cout << "Occ\nA\tC\tG\tT\n";
-        for (int i = 0; i != 4; i++)
+        for (int i = 0; i != 4; ++i)
                 cout << C[i] << "\t";
         cout << "\nOcc\nindex\tA\tC\tG\tT\n";
         for (uint32_t i = 0; i != N; ++i) {
