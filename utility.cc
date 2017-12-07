@@ -26,7 +26,9 @@ char *Extract(char *seq, const uint32_t &seq_size, uint32_t &trimmed_length)
         uint32_t total_num = 0;
         char *ptr = seq;
         for (uint32_t i = 0; i < seq_size; ++i) {
-                if (IsDNA(*ptr)) ++total_num;
+                if (IsDNA(*ptr)) {
+                        ++total_num;
+                }
                 ++ptr;
         }
         
@@ -35,11 +37,8 @@ char *Extract(char *seq, const uint32_t &seq_size, uint32_t &trimmed_length)
         char *ptr0 = ret_ptr;
         ptr = seq;
         for (uint32_t i = 0; i < seq_size; ++i) {
-                if (IsDNA(*ptr) && !IsN(*ptr)) {
-                        if (IsN(*ptr))
-                                *ptr0 = 'A';
-                        else
-                                *ptr0 = *ptr;
+                if (IsDNA(*ptr)) {
+                        *ptr0 = *ptr;
                         ++ptr0;
                 }
                 ++ptr;
@@ -86,7 +85,7 @@ char *ReadFasta(char *file_name, uint32_t &read_length)
 
 bool IsDNA(char c)
 {
-        return c == 'A' || c == 'C' || c == 'G' || c == 'T' || c == 'N';
+        return c == 'A' || c == 'C' || c == 'G' || c == 'T';
 }
 
 bool IsN(char c)
@@ -151,9 +150,8 @@ void CountSeedOccurrence(sbwt::BuildIndexRawData &build_index, uint32_t seed_len
                                 break;
                         }
                 } /* j */
+                //cout << count << "\t" << str_iter << endl;
                 ++count;
-
-                // cout << count << " " << i << "\t" << str_iter << endl;
 
         } /* i */
 
