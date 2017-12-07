@@ -7,15 +7,16 @@ fi
 rm -rf count_occ
 rwd=$PWD
 
+cd ../sbwt/
+
 make clean
 
 make count_occ
 
-#mv build_index /home/tongust/Projects/test/
-#mv count_occ /home/tongust/Projects/test/
+mv count_occ $rwd
 
 make clean
 
-#cd $rwd
+cd $rwd
 
 ./count_occ  $2 $1 $3 > stats.$1.$2.$3.csv
