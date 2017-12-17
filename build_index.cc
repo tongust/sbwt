@@ -1,15 +1,11 @@
 #include <stdlib.h>  // for strtol uint32_t etc.
-#include <string.h>
-#include <stdio.h>
 
 #include <string>
 #include <iostream>
 #include <vector>
 #include <memory> // for shared_ptr
 
-#include "log.h"
 #include "sbwt.h"
-#include "const.h"
 #include "utility.h"
 
 using std::shared_ptr;
