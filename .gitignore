@@ -1,0 +1,26 @@
+# ELFs
+build_index
+count_occ
+*.o
+*.a
+*.so
+
+# sequence files
+*.fa
+*.fastq
+*.fasta
+**/genome
+
+# cmake files
+CMakeCache.txt
+**/CMakeFiles
+**/cmake-build-debug
+cmake_install.cmake
+Makefile
+
+# IDE files
+**/.idea
+*.cbp
+
+# log files
+*.log
