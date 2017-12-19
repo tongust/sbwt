@@ -22,7 +22,7 @@ file ( GLOB varCPP ${CMAKE_SOURCE_DIR}/*.cpp)
 # exclude test_io.cpp to prevent targeting multi-main cpp file
 list(REMOVE_ITEM varCC "${CMAKE_SOURCE_DIR}/build_index.cc")
 list(REMOVE_ITEM varCC "${CMAKE_SOURCE_DIR}/count_occ.cc")
-list(REMOVE_ITEM varCPP "${CMAKE_SOURCE_DIR}/test_io.cpp")
+list(REMOVE_ITEM varCPP "${CMAKE_SOURCE_DIR}/sbwt_aligner.cpp")
 
 set(SRC_CC ${varCC} )
 set(SRC_C ${varC})
@@ -32,3 +32,5 @@ set(SRC_CPP ${varCPP})
 add_executable(build_index ${CMAKE_SOURCE_DIR}/build_index.cc ${SRC_C} ${SRC_CC} ${SRC_CPP})
 
 add_executable(count_occ ${CMAKE_SOURCE_DIR}/count_occ.cc ${SRC_C} ${SRC_CC} ${SRC_CPP})
+
+add_executable(sbwt ${CMAKE_SOURCE_DIR}/sbwt_aligner.cpp ${SRC_C} ${SRC_CC} ${SRC_CPP})

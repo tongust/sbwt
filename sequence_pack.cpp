@@ -166,7 +166,7 @@ void BaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq
 /// 0100 0[11]1 - G
 /// 0101 0[10]0 - T
 /// 0100 1[11]0 - N (G)
-void RC_BaseChar2Binary64B(uint64_t* binary_seq, int size_seq, uint64_t *binary_seq_rc)
+void RC_BaseChar2Binary64B(uint64_t* binary_seq, uint64_t size_seq, uint64_t *binary_seq_rc)
 {
         int n           = size_seq >> 5;
         int tail        = (size_seq % 32)<<1;

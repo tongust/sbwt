@@ -88,7 +88,7 @@ void BaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq
 /// 0101 0[10]0 - T
 /// 0100 1[11]0 - N (G)
 inline
-void RC_BaseChar2Binary64B(uint64_t* binary_seq, int size_seq, uint64_t *binary_seq_rc);
+void RC_BaseChar2Binary64B(uint64_t* binary_seq, uint64_t size_seq, uint64_t *binary_seq_rc);
 
 void NaiveBaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq);
 

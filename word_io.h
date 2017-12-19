@@ -7,6 +7,7 @@
 #include "assert_helpers.h"
 #include "endian_swap.h"
 
+
 /**
  * Write a 32-bit unsigned to an output stream being careful to
  * re-endianize if caller-requested endianness differs from current
@@ -44,6 +45,24 @@ static inline void writeI32(std::ostream& out, int32_t x) {
 }
 
 /**
+ * Write a 64-bit unsigned to an output stream being careful to
+ * re-endianize if caller-requested endianness differs from current
+ * host.
+ */
+static inline void writeU64(std::ostream& out, uint64_t x, bool toBigEndian) {
+        uint32_t y = endianizeU64(x, toBigEndian);
+        out.write((const char*)&y, 8);
+}
+
+/**
+ * Write a 64-bit unsigned to an output stream using the native
+ * endianness.
+ */
+static inline void writeU64(std::ostream& out, uint64_t x) {
+        out.write((const char*)&x, 8);
+}
+
+/**
  * Read a 32-bit unsigned from an input stream, inverting endianness
  * if necessary.
  */
@@ -52,6 +71,17 @@ static inline uint32_t readU32(std::istream& in, bool toBigEndian) {
 	in.read((char *)&x, 4);
 	assert_eq(4, in.gcount());
 	return endianizeU32(x, toBigEndian);
+}
+
+/**
+ * Read a 64-bit unsigned from an input stream, inverting endianness
+ * if necessary.
+ */
+static inline uint64_t readU64(std::istream& in, bool toBigEndian) {
+	uint64_t x;
+	in.read((char *)&x, 8);
+	assert_eq(8, in.gcount());
+	return endianizeU64(x, toBigEndian);
 }
 
 /**

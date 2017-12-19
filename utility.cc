@@ -125,7 +125,7 @@ void CountSeedOccurrence(sbwt::BuildIndexRawData &build_index, uint32_t seed_len
         auto N = build_index.length_ref;
         //auto B = build_index.seq_transformed;
         //auto O = build_index.occurrence;
-        //auto C = build_index.first_coloumn;
+        //auto C = build_index.first_column;
         auto period = build_index.period;
 
         if (N <= seed_length) {
@@ -160,8 +160,6 @@ void CountSeedOccurrence(sbwt::BuildIndexRawData &build_index, uint32_t seed_len
                          cout << i << "\t" << counts[i] << "\n";
                 }
         }
-
-        return;
 }
 
 void PrintHelp_BuildIndex(int argc, char **argv)
@@ -169,7 +167,6 @@ void PrintHelp_BuildIndex(int argc, char **argv)
         using std::cout;
         using std::endl;
         cout << "usage: build_index [period] [fa]" << endl;
-        return;
 }
 
 void PrintHelp_CountOcc(int argc, char **argv)
@@ -177,7 +174,14 @@ void PrintHelp_CountOcc(int argc, char **argv)
         using std::cout;
         using std::endl;
         cout << "usage: count_occ [period] [fa] [seed_length]" << endl;
-        return;
+}
+        
+void PrintHelp_SbwtAligner(int argc, char **argv)
+{
+        using std::cout;
+        using std::endl;
+        cout << "usage: sbwt [prefix of index files]" << endl;
+
 }
 
 } /* namespace utility */

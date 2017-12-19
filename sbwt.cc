@@ -9,14 +9,17 @@
 #include <iterator>
 #include <map>
 #include <memory>
-#include <numeric>
-#include <time.h>
-#include <tuple>
 #include <vector>
 
-#include "const.h"
 #include "sbwt.h"
 #include "log.h"
+#include "io_build_index.h"
+#include "alphabet.h"
+#include "ref_read.h"
+#include "word_io.h"
+#include "sequence_pack.h"
+
+
 namespace sbwt {
 
 BuildIndexRawData::BuildIndexRawData():
@@ -30,7 +33,7 @@ BuildIndexRawData::BuildIndexRawData():
 	period(2)
 {
 	for (int i = 0; i < 4; ++i) {
-		first_coloumn[i] = 0;
+		first_column[i] = 0;
 	}
 }
 
@@ -43,13 +46,15 @@ BuildIndexRawData::BuildIndexRawData (char *seq_dna, size_t n, const uint32_t &p
 
 	num_dollar = period - (length_ref % period);
 	length_ref += num_dollar;
+        /// TODO Bad idea to use realloc()
+        /// How to free memory created by realloc(), free() or delete[]?
 	seq_raw = (char *)realloc(seq_dna, length_ref*sizeof(char));
 
 	for (uint32_t i = 0; i < num_dollar; ++i) {
 		seq_raw[length_ref-i-1] = '$';
 	}		 
 
-	for (int i = 0; i < 4; ++i) { first_coloumn[i] = 0; }
+	for (int i = 0; i < 4; ++i) { first_column[i] = 0; }
 
 	occurrence = new uint32_t*[4];
 	for (int i = 0; i != 4; ++i)
@@ -65,6 +70,86 @@ BuildIndexRawData::BuildIndexRawData (char *seq_dna, size_t n, const uint32_t &p
 	for (size_t i = 0; i != length_ref; ++i) suffix_array[i] = i;
 
 }
+
+BuildIndexRawData::BuildIndexRawData(const string &prefix_filename)
+{
+
+        string file_array_filename = prefix_filename + ".array.sbwt";
+        string file_meta_filename = prefix_filename + ".meta.sbwt";
+
+        std::ifstream array_fin(file_array_filename.c_str(), std::ios_base::in | ios::binary);
+        std::ifstream meta_fin(file_meta_filename.c_str(), std::ios_base::in | ios::binary);
+
+        if ((!array_fin.is_open()) || (!meta_fin.is_open())) {
+                std::cerr << "Cannot open index files: " << prefix_filename << std::endl;
+                return;
+        }
+
+        uint32_t tmp32 = readU32(meta_fin, true);
+        bool is_big_endian = tmp32 != 0;
+
+        /**
+         * Meta information
+         */
+        length_ref          = readU32(meta_fin, is_big_endian);/* Length of reference sequence including $s*/
+        num_block_sort      = readU32(meta_fin, is_big_endian);/* Number of blocks, 4 for 256 */
+        num_dollar          = readU32(meta_fin, is_big_endian);/* The # of $s those are appended */
+        period              = readU32(meta_fin, is_big_endian);/* The period of sbwt */
+        uint64_t size_packed_seq        = readU32(meta_fin, is_big_endian);/* The size of packed sequence */
+
+        /// read first column
+        for (int i = 0; i != 4; ++i) {
+                first_column[i] = readU32(meta_fin, is_big_endian);
+        }
+
+        /**
+         * Array and sequence
+         */
+        {
+                std::shared_ptr<uint64_t > binary_seq64_ptr(new uint64_t[size_packed_seq]);
+
+                uint64_t *beg = binary_seq64_ptr.get();
+                uint64_t *end = beg + (size_packed_seq-1);
+                for (;beg != end; ++beg) {
+                        *beg = readU64(array_fin, is_big_endian);
+                }
+        }
+
+        /// The raw sequence
+        /// TODO map directly the memory to files
+        seq_raw = new char[length_ref];
+        array_fin.read(seq_raw, length_ref);
+
+        seq_transformed = nullptr;
+        //seq_transformed = new char[length_ref];
+        //array_fin.read(seq_transformed, length_ref);
+
+        /// Occurrence
+        occurrence = new uint32_t*[4];
+        for (int i = 0; i != 4; ++i) {
+                occurrence[i] = new uint32_t[length_ref];
+                uint32_t *beg = occurrence[i];
+                uint32_t *end = beg+length_ref;
+                while (beg != end) {
+                        *beg = readU32(array_fin, is_big_endian);
+                        ++beg;
+                }
+        }
+
+        /// suffix array
+        suffix_array = new uint32_t[length_ref];
+        uint32_t *beg = suffix_array;
+        uint32_t *end = suffix_array + length_ref;
+        while (beg != end) {
+                *beg = readU32(array_fin, is_big_endian);
+                ++beg;
+        }
+
+        array_fin.close();
+        meta_fin.close();
+
+}
+
 BuildIndexRawData::~BuildIndexRawData()
 {
 
@@ -94,7 +179,6 @@ void VectorSwap(uint32_t i, uint32_t j, uint32_t n, uint32_t* seq_index)
                 ++i;
                 ++j;
         }
-        return;
 }
 
 void SortSbwt(
@@ -105,7 +189,8 @@ void SortSbwt(
         uint32_t depth,
 	const uint32_t &length_ref,
         const uint32_t &step
-        ) {
+        )
+{
 	/* Condition of end */
 	if (begin+1 >= end || depth >= length_ref) return;
 
@@ -186,9 +271,9 @@ void SortSbwt(
 
         r = d - c;
         SortSbwt(seq, seq_index, end-r, end, depth, length_ref, step);
-        return;
 }
-void SortSbwt(BuildIndexRawData &build_index) {
+void SortSbwt(BuildIndexRawData &build_index)
+{
         return SortSbwt(build_index.seq_raw,
                         build_index.suffix_array,
                         0, build_index.length_ref,
@@ -196,7 +281,8 @@ void SortSbwt(BuildIndexRawData &build_index) {
                         build_index.period);
 }
 
-void Transform(BuildIndexRawData &build_index) {
+void Transform(BuildIndexRawData &build_index)
+{
         if (!build_index.seq_transformed) {
                 logger::LogDebug("seq_transformed is empty.");
                 return;
@@ -214,14 +300,14 @@ void Transform(BuildIndexRawData &build_index) {
                 ++sa;
                 ++seq;
         }
-        return;
 }
 
-void CountOccourrence(BuildIndexRawData &build_index) {
+void CountOccurrence(BuildIndexRawData &build_index)
+{
         auto N = build_index.length_ref;
         auto B = build_index.seq_transformed;
         auto O = build_index.occurrence;
-        auto C = build_index.first_coloumn;
+        auto C = &build_index.first_column[0];
         
         if (!B) return;
         switch (B[0]) {
@@ -275,7 +361,6 @@ void CountOccourrence(BuildIndexRawData &build_index) {
         C[1] = C[0];
         C[0] = 0;
 
-        return;
 }
 
 void BuildIndex(BuildIndexRawData &build_index) {
@@ -283,11 +368,12 @@ void BuildIndex(BuildIndexRawData &build_index) {
                         && build_index.seq_raw) {
                 SortSbwt(build_index);
                 Transform(build_index);
-                CountOccourrence(build_index);
+                CountOccurrence(build_index);
         }
 }
 
-void PrintFullSearchMatrix(BuildIndexRawData &build_index) {
+void PrintFullSearchMatrix(BuildIndexRawData &build_index)
+{
         using std::endl;
         using std::cout;
 
@@ -296,7 +382,7 @@ void PrintFullSearchMatrix(BuildIndexRawData &build_index) {
         auto N = build_index.length_ref;
         auto B = build_index.seq_transformed;
         auto O = build_index.occurrence;
-        auto C = build_index.first_coloumn;
+        auto C = &build_index.first_column[0];
 
         auto count10 = [](uint32_t i)->uint32_t{
                 uint32_t ret = 0;
@@ -342,10 +428,11 @@ void PrintFullSearchMatrix(BuildIndexRawData &build_index) {
                 cout << endl;
         }
         cout << "\nspaced BWT:\n";
-        for (uint32_t i = 0; i != N-1; ++i) {
-                cout << B[i] << ",";
+        if (B!= nullptr) {
+                for (uint32_t i = 0; i != N-1; ++i) { cout << B[i] << ","; }
+                cout << B[N-1] << "\n";
         }
-        cout << B[N-1] << "\n";
+
         cout << "Occ\nA\tC\tG\tT\n";
         for (int i = 0; i != 4; ++i)
                 cout << C[i] << "\t";
@@ -356,10 +443,6 @@ void PrintFullSearchMatrix(BuildIndexRawData &build_index) {
                         cout << O[j][i] << "\t";
         cout << "\n";
         }
-        return;
 }
-
-
-
 
 } /* namespace sbwt */

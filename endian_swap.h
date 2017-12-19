@@ -64,6 +64,7 @@ static inline uint32_t endianizeU32(uint32_t u, bool toBig) {
 	return endianSwapU32(u);
 }
 
+
 /**
  * Convert int32_t argument to the specified endianness.  It's assumed
  * that u currently has the endianness of the current machine.
@@ -75,4 +76,15 @@ static inline int32_t endianizeI32(int32_t i, bool toBig) {
 	return endianSwapI32(i);
 }
 
-#endif
+/**
+ * Convert uint64_t argument to the specified endianness.  It's assumed
+ * that u currently has the endianness of the current machine.
+ */
+static inline uint64_t endianizeU64(uint64_t u, bool toBig) {
+	if(toBig == currentlyBigEndian()) {
+		return u;
+	}
+	return endianSwapU64(u);
+}
+
+#endif /* ENDIAN_SWAP_H */

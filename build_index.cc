@@ -4,11 +4,15 @@
 #include <iostream>
 #include <vector>
 #include <memory> // for shared_ptr
+#include <fstream> // for ofstream, ifstream
 
 #include "sbwt.h"
 #include "utility.h"
+#include "io_build_index.h"
 
 using std::shared_ptr;
+using std::string;
+
 
 int main(int argc, char **argv)
 {
@@ -37,5 +41,10 @@ int main(int argc, char **argv)
 
         sbwt::PrintFullSearchMatrix(build_index);
 
+        /// write into disk
+        sbwt::WriteIntoDiskBuildIndex(build_index, string(file_name));
+
         return 0;
 }
+
+
