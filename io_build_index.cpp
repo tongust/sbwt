@@ -28,7 +28,6 @@ namespace sbwt
 
 void WriteIntoDiskBuildIndex(sbwt::BuildIndexRawData &build_index, const string &prefix_filename)
 {
-        for (int i = 0; i != build_index.length_ref; ++i) { cout << build_index.suffix_array[i] << ","; } cout << endl;
         vector<uint32_t > nums(build_index.length_ref);
         for (int i = 0; i != build_index.length_ref; ++i) {nums[i] = build_index.suffix_array[i];}
 

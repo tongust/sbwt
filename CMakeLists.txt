@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.9)
 project(sbwt)
 
 include_directories(${CMAKE_SOURCE_DIR}/SeqAn-1.1 ${CMAKE_SOURCE_DIR}/ ) # -I flags for compiler include file
-#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -std=c++11 -Wunused-local-typedefs -fpermissive -O3") # complier flag
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -std=c++11 -Wunused-local-typedefs -fpermissive -O0 -g3") # complier flag
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -std=c++11 -Wunused-local-typedefs -fpermissive -O3") # complier flag
+#set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -std=c++11 -Wunused-local-typedefs -fpermissive -O0 -g3") # complier flag
 
 
 #####################################

@@ -1,13 +1,9 @@
-#include <stdlib.h>
-#include <stdint.h>
-
 #include <algorithm>
 #include <iostream>
 #include <memory>
 
-#include "sbwt.h"
-#include "utility.h"
 #include "io_build_index.h"
+#include "utility.h"
 
 using std::shared_ptr;
 using std::string;
@@ -22,8 +18,7 @@ int main(int argc, char **argv)
 
         string prefix_filename = string(argv[1]);
         sbwt::BuildIndexRawData build_index(prefix_filename);
-
-        sbwt::PrintFullSearchMatrix(build_index);
+        //sbwt::PrintFullSearchMatrix(build_index);
 
         return 0;
 }

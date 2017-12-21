@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <string.h>
 #include <stdint.h>
 
 #include <algorithm>
@@ -9,16 +8,13 @@
 #include <iterator>
 #include <map>
 #include <memory>
-#include <vector>
 
 #include "sbwt.h"
 #include "log.h"
-#include "io_build_index.h"
 #include "alphabet.h"
 #include "ref_read.h"
 #include "word_io.h"
 #include "sequence_pack.h"
-
 
 namespace sbwt {
 
@@ -153,16 +149,16 @@ BuildIndexRawData::BuildIndexRawData(const string &prefix_filename)
 BuildIndexRawData::~BuildIndexRawData()
 {
 
-        if (seq_raw) { delete[] seq_raw; }
+        delete[] seq_raw;
 
-        if (suffix_array) { delete[] suffix_array; }
+        delete[] suffix_array;
 
         if (occurrence) {
 		for (int i = 0; i != 4; ++i) { if (occurrence[i]) delete[] occurrence[i]; }
 		delete[] occurrence;
         }
 
-	if (seq_transformed) { delete[] seq_transformed; }
+	delete[] seq_transformed;
 }
 
 

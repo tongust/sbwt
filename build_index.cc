@@ -39,12 +39,10 @@ int main(int argc, char **argv)
         sbwt::BuildIndexRawData build_index(seq, read_length, period, num_block_sort);
         sbwt::BuildIndex(build_index);
 
-        sbwt::PrintFullSearchMatrix(build_index);
+        //sbwt::PrintFullSearchMatrix(build_index);
 
         /// write into disk
         sbwt::WriteIntoDiskBuildIndex(build_index, string(file_name));
 
         return 0;
 }
-
-
