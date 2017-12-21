@@ -466,8 +466,11 @@ void SortSbwtBlockwise(BuildIndexRawData &build_index)
 
         /// Firstly, split the sequence rotation matrix into 4^num_block blocks
         SortSbwtBlockwise( seq, seq_index, 0, N, 0, length_ref, step, num_block_sort );
+
+        PrintFullSearchMatrix(build_index);
+
         {
-                SortSbwt(seq, seq_index, 0, 1, num_block_sort,N, step);
+                SortSbwt(seq, seq_index, 0, 1, num_block_sort, N, step);
                 vector<char> tmpcv(num_block_sort, '\0');
                 uint32_t j = 0;
                 uint32_t t0 = 0;
@@ -578,15 +581,15 @@ void SortSbwtBlockwise(
         VectorSwap(b, end-r, r, seq_index);
         r = b - a + begin;
 
-        SortSbwt(seq, seq_index, begin, r, depth, length_ref, step);
+        SortSbwtBlockwise(seq, seq_index, begin, r, depth, length_ref, step, num_block);
 
         tmpval = seq_index[r] + depth;
         if (tmpval < length_ref) {
-                SortSbwt(seq, seq_index, r, end-d+c, depth+step, length_ref, step);
+                SortSbwtBlockwise(seq, seq_index, r, end-d+c, depth+step, length_ref, step, num_block);
         }
 
         r = d - c;
-        SortSbwt(seq, seq_index, end-r, end, depth, length_ref, step);
+        SortSbwtBlockwise(seq, seq_index, end-r, end, depth, length_ref, step, num_block);
 }
 
 } /* namespace sbwt */

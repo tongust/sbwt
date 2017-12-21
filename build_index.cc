@@ -24,7 +24,7 @@ int main(int argc, char **argv)
         }
 
         uint32_t period = GetUint(argc, argv[1]);
-        uint32_t num_block_sort = 4;
+        uint32_t num_block_sort = 2;
         uint32_t read_length = 0;
         char *file_name = argv[2];
 
