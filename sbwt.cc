@@ -8,6 +8,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <vector>
 
 #include "sbwt.h"
 #include "log.h"
@@ -17,6 +18,7 @@
 #include "sequence_pack.h"
 
 namespace sbwt {
+using std::vector;
 
 BuildIndexRawData::BuildIndexRawData():
 	seq_raw(nullptr),
@@ -360,12 +362,19 @@ void CountOccurrence(BuildIndexRawData &build_index)
 }
 
 void BuildIndex(BuildIndexRawData &build_index) {
-        if (build_index.suffix_array
-                        && build_index.seq_raw) {
+        if (build_index.suffix_array && build_index.seq_raw) {
                 SortSbwt(build_index);
                 Transform(build_index);
                 CountOccurrence(build_index);
         }
+}
+
+void BuildIndexBlockwise(BuildIndexRawData &build_index) {
+         if (build_index.suffix_array && build_index.seq_raw) {
+                 SortSbwtBlockwise(build_index);
+                 Transform(build_index);
+                 CountOccurrence(build_index);
+         }
 }
 
 void PrintFullSearchMatrix(BuildIndexRawData &build_index)
@@ -439,6 +448,145 @@ void PrintFullSearchMatrix(BuildIndexRawData &build_index)
                         cout << O[j][i] << "\t";
         cout << "\n";
         }
+}
+/**Build sbwt index blockwise for large genomes such homo, however the max length
+ * should be less than 4G. Otherwise, you should split the reference into muliple
+ * partation.
+ */
+/// TODO The way to build index of huge reference. Distribution system?
+void SortSbwtBlockwise(BuildIndexRawData &build_index)
+{
+	char *seq = build_index.seq_raw;
+        uint32_t *seq_index = build_index.suffix_array;
+        const uint32_t &length_ref = build_index.length_ref;
+        const uint32_t &step = build_index.period;
+        const uint32_t &num_block_sort = build_index.num_block_sort;
+        uint32_t N = length_ref;
+        const uint32_t &period = build_index.period;
+
+        /// Firstly, split the sequence rotation matrix into 4^num_block blocks
+        SortSbwtBlockwise( seq, seq_index, 0, N, 0, length_ref, step, num_block_sort );
+        {
+                SortSbwt(seq, seq_index, 0, 1, num_block_sort,N, step);
+                vector<char> tmpcv(num_block_sort, '\0');
+                uint32_t j = 0;
+                uint32_t t0 = 0;
+                bool flg = false;
+                uint32_t beg0 = 0, end0 = 1;
+                for (j = 0; j < num_block_sort; ++j) {
+                       tmpcv[j] = seq[(j*num_block_sort+seq_index[0])%N];
+                }
+                for (uint32_t i = 1; i < N; ++i) {
+                        flg = true;
+                        for (j = 0; j < num_block_sort; ++j) {
+                                t0 = (j*period+seq_index[i]) % N;
+                                if (seq[t0] != tmpcv[j] && flg) {
+                                        flg = false;
+                                }
+                                tmpcv[j] = seq[t0];
+                        }
+                        if (!flg) {
+                                end0 = i;
+                                if (end0 > 1 + beg0) {
+                                        SortSbwt(seq, seq_index, beg0, end0, num_block_sort,N, step);
+                                }
+                                beg0 = i;
+                        }
+                }
+        }
+}
+
+void SortSbwtBlockwise(
+	char *seq,                      /* sequence */
+        uint32_t *seq_index,            /* suffix array */
+	uint32_t begin,
+        uint32_t end,
+        uint32_t depth,
+	const uint32_t &length_ref,
+        const uint32_t &step,           /* a.k.a period*/
+        const uint32_t &num_block
+        )
+{
+	/* Condition of end */
+	if (depth >= num_block /* Condition for blockwise-building */|| begin+1 >= end || depth >= length_ref) return;
+
+	int64_t a = 0, b = 0, c = 0,
+		d = 0, r = 0, v = 0,
+		distance = 0;
+	uint32_t tmpval = 0, tmpval1 = 0;
+	distance = end - begin;
+	a = (rand() % distance) + begin;
+
+	/* swap begin with a */
+	tmpval = seq_index[begin];
+	seq_index[begin] = seq_index[a];
+	seq_index[a] = tmpval;
+
+	tmpval1 = seq_index[begin] + depth;
+	/* Guarantee that: seq[index] or '$' if index > length(seq) */
+	v = tmpval1 >= length_ref ? '$' : seq[tmpval1];
+	a = b = begin + 1;
+	c = d = end - 1;
+
+	for (;;) {
+		while ( b <= c &&
+			(tmpval1 = seq_index[b]+depth, r = (tmpval1 >= length_ref ? '$' : seq[tmpval1]) - v) <= 0
+			) {
+			if (r == 0) {
+				/* swap a with b */
+				tmpval = seq_index[a];
+				seq_index[a] = seq_index[b];
+				seq_index[b] = tmpval;
+
+				++a;
+			}
+			++b;
+		}
+
+		while (
+			b <= c &&
+			(tmpval1 = seq_index[c]+depth, r = (tmpval1 >= length_ref ? '$' : seq[tmpval1]) - v) >= 0
+			) {
+			if (r == 0) {
+				/* swap c with d */
+				tmpval = seq_index[c];
+				seq_index[c] = seq_index[d];
+				seq_index[d] = tmpval;
+
+				--d;
+			}
+			--c;
+		}
+		if (b > c) break;
+
+		/* swap b and c */
+		tmpval = seq_index[b];
+		seq_index[b] = seq_index[c];
+		seq_index[c] = tmpval;
+		++b;
+		--c;
+	}
+
+        int64_t t0 = a - begin;
+        int64_t t1 = b - a;
+        r = t0 < t1 ? t0 : t1;
+        VectorSwap(begin, b-r, r, seq_index);
+
+        t0 = d - c;
+        t1 = end - 1 - d;
+        r = t0 < t1 ? t0 : t1;
+        VectorSwap(b, end-r, r, seq_index);
+        r = b - a + begin;
+
+        SortSbwt(seq, seq_index, begin, r, depth, length_ref, step);
+
+        tmpval = seq_index[r] + depth;
+        if (tmpval < length_ref) {
+                SortSbwt(seq, seq_index, r, end-d+c, depth+step, length_ref, step);
+        }
+
+        r = d - c;
+        SortSbwt(seq, seq_index, end-r, end, depth, length_ref, step);
 }
 
 } /* namespace sbwt */

@@ -45,11 +45,14 @@ struct BuildIndexRawData{
 
 void SortSbwt(char*, uint32_t*, uint32_t, uint32_t, uint32_t, const uint32_t&, const uint32_t&);
 inline void VectorSwap(uint32_t, uint32_t, uint32_t, uint32_t*);
-void SortSbwt(BuildIndexRawData &);
-void Transform(BuildIndexRawData &);
-void CountOccurrence(BuildIndexRawData &);
-void BuildIndex(BuildIndexRawData &);
+void BuildIndex(BuildIndexRawData&);
+void BuildIndexBlockwise(BuildIndexRawData&);
+void CountOccurrence(BuildIndexRawData&);
 void PrintFullSearchMatrix(BuildIndexRawData&);
+void SortSbwt(BuildIndexRawData&);
+void SortSbwtBlockwise( char*, uint32_t*, uint32_t, uint32_t, uint32_t, const uint32_t&, const uint32_t&, const uint32_t&);
+void SortSbwtBlockwise(BuildIndexRawData&);
+void Transform(BuildIndexRawData&);
 
 #ifndef SNIPPET_COUNTOCC
 #define SNIPPET_COUNTOCC()  \
