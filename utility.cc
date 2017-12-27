@@ -93,8 +93,8 @@ bool IsN(char c)
         return c == 'N';
 }
 
-/* Get integers from argv.
- * */
+/** Get integers from argv.
+ */
 uint32_t GetUint(int argc, char *parameter)
 {
         errno = 0;
@@ -116,16 +116,11 @@ uint32_t GetUint(int argc, char *parameter)
 void CountSeedOccurrence(sbwt::BuildIndexRawData &build_index, uint32_t seed_length)
 {
         using std::vector;
-        //const uint32_t Length_Seed = 14;
-        //char str_iter[Length_Seed] = {0}
         std::string  str_iter(seed_length, 0);
 
         auto SA = build_index.suffix_array;
         auto X = build_index.seq_raw;
         auto N = build_index.length_ref;
-        //auto B = build_index.seq_transformed;
-        //auto O = build_index.occurrence;
-        //auto C = build_index.first_column;
         auto period = build_index.period;
 
         if (N <= seed_length) {
@@ -150,7 +145,6 @@ void CountSeedOccurrence(sbwt::BuildIndexRawData &build_index, uint32_t seed_len
                                 break;
                         }
                 } /* j */
-                //cout << count << "\t" << str_iter << endl;
                 ++count;
 
         } /* i */
@@ -173,7 +167,7 @@ void PrintHelp_CountOcc(int argc, char **argv)
 {
         using std::cout;
         using std::endl;
-        cout << "usage: count_occ [period] [fa] [seed_length]" << endl;
+        cout << "usage: count_occ [prefix name of index files] [seed_length]" << endl;
 }
         
 void PrintHelp_SbwtAligner(int argc, char **argv)

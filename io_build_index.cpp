@@ -164,11 +164,6 @@ int TestReadWriteBinaryData(int argc, char **argv)
 
         return 0;
 }
-void PrintMsg()
-{
-        cout << "Usage: [fasta file]\n";
-        return;
-}
 
 void ReadFasta(char **argv)
 {
