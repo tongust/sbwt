@@ -23,6 +23,7 @@ Makefile
 # IDE files
 **/.idea
 *.cbp
+**/venv
 
 # log files
 *.log
