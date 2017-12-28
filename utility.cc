@@ -174,7 +174,7 @@ void PrintHelp_SbwtAligner(int argc, char **argv)
 {
         using std::cout;
         using std::endl;
-        cout << "usage: sbwt [prefix of index files]" << endl;
+        cout << "usage: sbwt  [fasta file] [prefix of index files]" << endl;
 
 }
 

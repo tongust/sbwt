@@ -118,7 +118,7 @@ void PrintBinary(T c, const std::string &end_str)
 }
 
 /* It seems that 'inline' does not work here */
-/* TODO should be include */
+/* TODO should be included */
 void BaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq)
 {
         uint64_t *p = (uint64_t*)buffer;

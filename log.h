@@ -12,7 +12,8 @@ namespace logger {
 
 using std::string;
 
-void LogDebug(const string &msg);
+void LogDebug(const string &);
+void LogError(const string &);
 
 } /* logger */
 

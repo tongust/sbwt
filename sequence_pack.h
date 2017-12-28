@@ -22,7 +22,7 @@ extern uint8_t charToDna5[256];
 /// A=3, C=2, G=1, T=0, N=4
 extern uint8_t rcCharToDna5[256];
 
-/*
+/**
  * The table turns over a bite 2-bit-wise. Such 10-00-11-01 to 01-11-00-10
  * */
 extern const uint8_t Array256Swap2bitTable[256];
@@ -31,6 +31,16 @@ extern const uint8_t Array256Swap2bitTable[256];
 #ifndef BUILTIN_POPCOUNT
 #define BUILTIN_POPCOUNT
 #endif
+
+/**
+ * v0, uint64_t, used for left hand side
+ * v1, uint64_t, used for rhs
+ * v2, uint64_t, temporary value
+ * diff_count, int, Hamming weight
+ */
+#define HammingWeightDna64(v0, v1)\
+        v2 = v0^v1;\
+        diff_count = __builtin_popcountll( ((v2<<1) | v2) & 0xAAAAAAAAAAAAAAAAull )
 
 /* Benchmark */
 #ifdef BITSET_POPCOUNT
@@ -56,8 +66,6 @@ extern const uint8_t Array256Swap2bitTable[256];
         x = (x & 0x3F)
 #endif
 
-
-
 template <typename T>
 void PrintBinary(T c, const std::string &end_str = "\n");
 
@@ -78,7 +86,7 @@ void PrintBinary(T c, const std::string &end_str = "\n");
         c |= c >> 24
 
 /* It seems that 'inline' does not work here */
-/* TODO should be include */
+/* TODO should be included */
 void BaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq);
 
 /* Reverse Complement version */

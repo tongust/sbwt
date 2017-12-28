@@ -1,24 +1,33 @@
 #include <algorithm>
 #include <iostream>
-#include <memory>
+#include <string>
+#include <bitset>
 
 #include "io_build_index.h"
 #include "utility.h"
+#include "sbwt_search.h"
 
 using std::shared_ptr;
 using std::string;
 using namespace utility;
+using std::bitset;
 
 int main(int argc, char **argv)
 {
-        if (argc != 2) {
+        if (argc != 3) {
                 PrintHelp_SbwtAligner(argc, argv);
                 return 1;
         }
+#ifdef SBWT_VERBOSE
+        using std::string;
+        string file_name(argv[1]);
+        sbwt::Test_reads_buffer(file_name);
+#endif /* SBWT_VERBOSE */
 
-        string prefix_filename = string(argv[1]);
+#if 0
+        string reads_filename = string(argv[1]);
+        string prefix_filename = string(argv[2]);
         sbwt::BuildIndexRawData build_index(prefix_filename);
-        //sbwt::PrintFullSearchMatrix(build_index);
-
+#endif
         return 0;
 }
