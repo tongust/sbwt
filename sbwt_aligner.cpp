@@ -20,8 +20,9 @@ int main(int argc, char **argv)
         }
 #ifdef SBWT_VERBOSE
         using std::string;
-        string file_name(argv[1]);
-        sbwt::Test_reads_buffer(file_name);
+        string file_fasta(argv[1]);
+        string file_index(argv[2]);
+        sbwt::Test_reads_buffer(file_fasta, file_index);
 #endif /* SBWT_VERBOSE */
 
 #if 0

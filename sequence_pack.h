@@ -33,14 +33,10 @@ extern const uint8_t Array256Swap2bitTable[256];
 #endif
 
 /**
- * v0, uint64_t, used for left hand side
- * v1, uint64_t, used for rhs
  * v2, uint64_t, temporary value
  * diff_count, int, Hamming weight
  */
-#define HammingWeightDna64(v0, v1)\
-        v2 = v0^v1;\
-        diff_count = __builtin_popcountll( ((v2<<1) | v2) & 0xAAAAAAAAAAAAAAAAull )
+#define HammingWeightDna64(v2) __builtin_popcountll( ((v2<<1) | v2) & 0xAAAAAAAAAAAAAAAAull )
 
 /* Benchmark */
 #ifdef BITSET_POPCOUNT

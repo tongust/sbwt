@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <bitset>
+#include <memory>
 
 #include "sbwt_search.h"
 #include "sequence_pack.h"
@@ -91,6 +92,7 @@ namespace sbwt
                 uint32_t left = 64 - right;
 
                 uint64_t *q     = array;
+                /// TODO SEG ERROR
                 uint64_t *q_end = array + size;
 
                 *p = (*q)<<right;
@@ -116,6 +118,7 @@ namespace sbwt
 #ifdef SBWT_VERBOSE
         using std::cout;
         using std::endl;
+        using std::shared_ptr;
 
         void bitset64::Print()
         {
@@ -188,36 +191,90 @@ namespace sbwt
                 b64.Print();
         }
 
-        void Test_reads_buffer(const std::string &file_name)
+static const uint64_t DnaStringRightShiftMask[32] = {
+                0xffffffffffffffffULL, 0x3fffffffffffffffULL, 0xfffffffffffffffULL, 0x3ffffffffffffffULL,
+                0xffffffffffffffULL, 0x3fffffffffffffULL, 0xfffffffffffffULL, 0x3ffffffffffffULL,
+                0xffffffffffffULL, 0x3fffffffffffULL, 0xfffffffffffULL, 0x3ffffffffffULL,
+                0xffffffffffULL, 0x3fffffffffULL, 0xfffffffffULL, 0x3ffffffffULL,
+                0xffffffffULL, 0x3fffffffULL, 0xfffffffULL, 0x3ffffffULL,
+                0xffffffULL, 0x3fffffULL, 0xfffffULL, 0x3ffffULL,
+                0xffffULL, 0x3fffULL, 0xfffULL, 0x3ffULL,
+                0xffULL, 0x3fULL, 0xfULL, 0x3ULL
+};
+        void Test_reads_buffer(const std::string &file_fasta, const std::string &file_index)
         {
 
-                string bs = "01010101001010101000100001010100101011111111111111100100111111111111110001010011111111110001000000011110000000111111100011110011";
-                string bs0(bs.begin(), bs.begin() + 64),
-                                bs1(bs.begin()+64, bs.end());
-                uint64_t array[2];
-                bitset<64> b0(bs0);
-                bitset<64> b1(bs1);
+                reads_buffer rb_fasta(file_fasta);
+                reads_buffer rb_index(file_index);
 
-                array[0] = bitset<64>(bs0).to_ullong();
-                array[1] = bitset<64>(bs1).to_ullong();
+                /// reads reference file
+                rb_index.ReadNext();
+                rb_index.ReadNext();
 
-                b0 = b1;
+                uint32_t size_ref_char = rb_index.length_read;
+                uint32_t size_ref_64bit = (size_ref_char >> 5) + 1;
+                uint32_t size_read_char = 150;
+                uint32_t size_read_64bit = (150/32)+1;
 
-                b0[32] = 1;
-                b0[33] = 1;
-                b0[1] = ~b0[1];
-                b0[2] = ~b0[2];
-                b0[3] = ~b0[3];
-                cout << b0 << endl << b1 << endl;
+                shared_ptr<uint64_t > ref_bin_sptr(new uint64_t[size_ref_64bit]);
+                uint64_t *ref_bin_ptr = ref_bin_sptr.get();
 
-                uint64_t v0 = b0.to_ullong();
-                uint64_t v1 = b1.to_ullong();
+                sbwtio::BaseChar2Binary64B(rb_index.buffer, size_ref_char, ref_bin_ptr);
+
+
+                bitset64 bt;
+
+                uint32_t index = 0;
+
+                uint64_t v0 = 0;
+                uint64_t v1 = 0;
                 uint64_t v2 = 0;
+
                 int diff_count = 0;
 
-                HammingWeightDna64(v0, v1);
-                cout << diff_count << endl;
-                /// hammming weight
+                uint64_t *p = nullptr;
+                uint64_t *p_end = nullptr;
+                uint64_t *q = nullptr;
+
+                for (uint32_t i = 0;;++i) {
+
+                        /**
+                         * read head
+                         */
+                        rb_fasta.ReadNext();
+                        if (rb_fasta.length_read == -1) break;
+                        /**
+                         * read DNAs
+                         */
+                        rb_fasta.ReadNext();
+
+                        sbwtio::BaseChar2Binary64B(rb_fasta.buffer, rb_fasta.length_read, bt.array);
+                        bt.clear();
+
+
+                        index = i % 32;
+                        diff_count = 0;
+
+                        if (index != 0) {
+                                p = bt.array + (index<<5);
+                                bt.RightShiftDna(index, size_read_char);
+
+                        } else {
+                                p = bt.array;
+                        }
+
+                        p_end = p + size_read_64bit;
+                        q = ref_bin_ptr + (i >> 5);
+
+                        for (; p != p_end; ++p, ++q) { v2 = (*p) ^ (*q); diff_count += HammingWeightDna64(v2); }
+
+                        cout << diff_count << endl;
+                }
+
+                return;
+
+
+
 #if 0
                 reads_buffer rb(file_name);
                 bitset64 bt;

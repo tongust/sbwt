@@ -37,14 +37,14 @@ namespace sbwt
 #endif
 
         public:
-                uint64_t array[32*MAX_READS_BINARY_LENGTH];
+                uint64_t array[32*MAX_READS_BINARY_LENGTH+1024];//////////////////////////////////// Why ???
         private:
                 uint32_t flag;
         };
 
 #ifdef SBWT_VERBOSE
         void TestBitShift();
-        void Test_reads_buffer(const std::string&);
+        void Test_reads_buffer(const std::string&, const std::string&);
 #endif /* SBWT_VERBOSE */
 
         class reads_buffer
