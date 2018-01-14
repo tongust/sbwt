@@ -71,6 +71,7 @@ void PrintBinary(T c, const std::string &end_str = "\n");
 /// 0101 0[10]0 - T
 /// 0000 0110 ... mask for extracting DNA base pair
 #define BASE_EXTRACT_MASK64 0x0606060606060606ULL
+#define BASE_EXTRACT_MASK32 0x06060606UL
 
 /// turn 8 chars (1 unsigned 64-bit integer) to 8 base pairs (16-bit)
 #define UINT64_TO_8BP(c)\
@@ -81,9 +82,11 @@ void PrintBinary(T c, const std::string &end_str = "\n");
         c &=             0x000000FF000000FFULL;\
         c |= c >> 24
 
+
 /* It seems that 'inline' does not work here */
 /* TODO should be included */
-void BaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq);
+void BaseChar2Binary64B(char*, uint64_t, uint64_t*);
+void BaseChar2Binary8B(char*, uint32_t, uint8_t*);
 
 /* Reverse Complement version */
 /// 0100 0[00]1 - A

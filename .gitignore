@@ -6,6 +6,8 @@ count_occ
 *.a
 *.so
 
+*.pyc
+
 # sequence files
 *.fa
 *.fastq

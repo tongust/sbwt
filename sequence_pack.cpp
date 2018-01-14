@@ -117,6 +117,58 @@ void PrintBinary(T c, const std::string &end_str)
         return;
 }
 
+#ifdef SBWT_DEBUG
+//#define SBWT_DEBUG_BASECHAR2BINARY8B
+#else
+#undef SBWT_DEBUG_BASECHAR2BINARY8B
+#endif
+//#define SBWT_DEBUG_BASECHAR2BINARY8B
+
+        /// Turn string of DNAs to packed 8-bit sequence.
+        void BaseChar2Binary8B(char *buffer, uint32_t size, uint8_t *bin)
+        {
+#ifdef SBWT_DEBUG_BASECHAR2BINARY8B
+                auto print = [](uint32_t v)->void {
+                        auto s = bitset<32>(v).to_string();
+                        for (int i = 0; i < 32; ++i) {
+                                cout << s[i];
+                                if (i % 2 == 1)
+                                        cout << " ";
+                                if (i % 4 == 3)
+                                        cout << " ";
+                                if (i % 8 == 7)
+                                        cout << "  ";
+                        } cout << endl;
+                };
+#endif
+                uint32_t *p = (uint32_t*)buffer;
+                uint32_t *p_end = p + size;
+                static uint8_t array[4] = {0};
+                static uint32_t &c = *((uint32_t*)array);
+                for (; p != p_end; ++p) {
+                        c = ((*p) >> 1) & 0x03030303;
+#ifdef SBWT_DEBUG_BASECHAR2BINARY8B
+                        static int count = 0;
+                        cout << ++count << endl;
+                        print(*p);
+                        print(c);
+#endif
+                        c |= (c >> 6);
+#ifdef SBWT_DEBUG_BASECHAR2BINARY8B
+                        print(c);
+#endif
+                        c |= c >> 12;
+#ifdef SBWT_DEBUG_BASECHAR2BINARY8B
+                        print(c);
+#endif
+                        *bin = array[0];
+                        ++bin;
+#ifdef SBWT_DEBUG_BASECHAR2BINARY8B
+                        cout << bitset<8>(c) << endl;
+#endif
+                }
+        }
+
 /* It seems that 'inline' does not work here */
 /* TODO should be included */
 void BaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq)
@@ -124,8 +176,7 @@ void BaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq
         uint64_t *p = (uint64_t*)buffer;
         uint64_t c = 0, v = 0, i = 0;
         for (;;) {
-                v = *binary_seq;
-
+                v = 0;
                 if (i >= size_buffer) { *binary_seq = v; break; }
                 else { i += 8; }
                 c = *p;
@@ -157,7 +208,6 @@ void BaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq
                 ++p;
                 ++binary_seq;
         }
-        return;
 }
 
 /* Reverse Complement version */

@@ -18,17 +18,9 @@ int main(int argc, char **argv)
                 PrintHelp_SbwtAligner(argc, argv);
                 return 1;
         }
-#ifdef SBWT_VERBOSE
-        using std::string;
-        string file_fasta(argv[1]);
-        string file_index(argv[2]);
-        sbwt::Test_reads_buffer(file_fasta, file_index);
-#endif /* SBWT_VERBOSE */
 
-#if 0
         string reads_filename = string(argv[1]);
         string prefix_filename = string(argv[2]);
         sbwt::BuildIndexRawData build_index(prefix_filename);
-#endif
         return 0;
 }

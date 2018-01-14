@@ -34,6 +34,7 @@ namespace sbwt
                 uint32_t size();
 #ifdef SBWT_VERBOSE
                 void Print();
+                static void Print(uint64_t*, uint32_t);
 #endif
 
         public:
@@ -44,7 +45,9 @@ namespace sbwt
 
 #ifdef SBWT_VERBOSE
         void TestBitShift();
-        void Test_reads_buffer(const std::string&, const std::string&);
+        void TestBit64Map(const std::string&, const std::string&);
+        void TestBit8Map(const std::string&, const std::string&);
+        void TestNaiveMap(const std::string&, const std::string&);
 #endif /* SBWT_VERBOSE */
 
         class reads_buffer

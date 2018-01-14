@@ -178,4 +178,11 @@ void PrintHelp_SbwtAligner(int argc, char **argv)
 
 }
 
+        void PrintHelp_SbwtTestBitset(int argc, char **argv)
+        {
+                using std::cout;
+                using std::endl;
+                cout << "usage: sbwt_test_bitset [fasta file] [prefix of index files] [option<1: 64bit; 2: 8bit; otherwise: naive>]" << endl;
+        }
+
 } /* namespace utility */

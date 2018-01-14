@@ -1,76 +1,65 @@
-from sys import argv
-import random
+import os
 
 
+def prepare_data(num_test):
+    print("Generating reference fasta...")
+    os.system("python ./GenRandomDnas.py " +
+              str(num_test+10000) +
+              "> f.fa")
 
-def IsDna(c):
-        return c == 'A' or c == 'C' or c == 'G' or c == 'T'
-
-
-def Mutation(reads):
-	d = {'A':"CGT", 'C':"AGT", "G":"ACT", "T":"ACG"}
-	idxs = range(0, len(reads))
-	num = random.randrange(0, len(reads)+1)
-	for i in xrange(0, num):
-		c = reads[i]
-		reads = reads[:i:] + random.choice(d[c]) + reads[i+1::]
-	return reads, num
+    print("Generating faked reads fasta...")
+    os.system("python ./GenReferenceAndReads.py f.fa 150 " +
+              str(num_test) +
+              " > r.fa")
 
 
-def GenerateReadsKmer(file_name, kmer, size):
-	"""
-	Assuming there exists only one read in fasta file.
-	"""
+def load_data(file_r, file_f):
+    os.system("./sbwt " + file_r + " " + file_f + " > run.check.fa")
 
-	size0 = size
+    ref_data = []
+    run_data = []
 
-	flag = False
-	with open(file_name) as mf:
-		for ml in mf:
-			size = min(len(ml), size0+kmer)
-
-			if ml[0] == '>':
-				if flag:
-					break
-				flag = True
-				continue
-			else:
-				ml = ml[:-1:].replace("N", "")
-				if len(ml) < kmer or size < kmer:
-					exit()
-
-				for i in xrange(0, size - kmer):
-					line, num = Mutation(ml[i:i+kmer])
-					print "r"+str(i)+"-"+str(num)
-					print line
-
-def CleanN_Fasta(file_name):
-    line_width = 70
-    line = ""
-
-    with open(file_name) as mf:
+    c = False
+    with open(file_r, "r") as mf:
         for ml in mf:
-            if ml[0] == '>':
-                if len(line) > 0:
-                    print line
-                    line = ""
-                    print ml,
-                else:
-                    for c in ml:
-                        if IsDna(c):
-                            if len(line) == line_width:
-                                print line
-                                line = ""+c
-                            else:
-                                line += c
-        if len(line) > 0:
-            print line
+            if c:
+                c = False
+                continue
+            else:
+                c = True
+                ref_data.append(
+                    int(
+                        ml.split("-")[1].rstrip('\n')
+                    )
+                )
+    with open("run.check.fa", "r") as mf:
+        for ml in mf:
+            run_data.append(
+                int(
+                    ml.rstrip('\n')
+                )
+            )
+    # clean files
+    os.system("rm -rf run.check.fa")
+    return run_data, ref_data
+
+
+def check_nums(r, f):
+    c = 0
+    for i, j in zip(r, f):
+        if i != j:
+            c += 1
+    return c
 
 
 if __name__ == '__main__':
-	if len(argv) != 4:
-		print "usage: ", argv[0], " [.fa] [length (150)] [size 1024*1024] \n\r(Asumming there exits only one reads in .fa)"
-		exit()
-	kmer = int(argv[2])
-	size = int(argv[3])
-	GenerateReadsKmer(argv[1], kmer, size)
+    num_test = 10000000
+    prepare_data(num_test)
+    print("Test "+str(num_test) + " reads")
+
+    exit()
+
+    r, f = load_data("r.fa", "f.fa")
+    c = check_nums(r, f)
+
+    print("Number of mismatches: " + str(c))
