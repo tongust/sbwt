@@ -2,9 +2,12 @@
 sbwt
 build_index
 count_occ
+sbwt_test_bitset
 *.o
 *.a
 *.so
+
+*.pyc
 
 # sequence files
 *.fa
