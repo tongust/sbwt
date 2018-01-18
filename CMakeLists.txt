@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.9)
 project(sbwt)
 
+# Check Platform
+if(CYGWIN)
+    add_definitions(
+        -DS_IREAD=0000400
+        -DS_IWRITE=0000200
+    )
+endif(CYGWIN)
+
 include_directories(${CMAKE_SOURCE_DIR}/SeqAn-1.1 ${CMAKE_SOURCE_DIR}/ ) # -I flags for compiler include file
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -std=c++11 -Wunused-local-typedefs -fpermissive -O3") # complier flag (Optimal)
 #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -std=c++11 -Wunused-local-typedefs -fpermissive -Og -g3 -ggdb") # complier flag (Not optimal)
