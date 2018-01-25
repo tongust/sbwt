@@ -686,11 +686,3 @@ namespace sbwt
         }
 
 } /* namespace sbwt */
-// %s/cout\/\*\*\//\/\/cout\/\*\*\//g
-// %s/\/\/cout\/\*\*\//cout\/\*\*\//g
-
-// %s/\/\/PrintBit64Index\/\*\*\//PrintBit64Index\/\*\*\//g
-// %s/PrintBit64Index\/\*\*\//\/\/PrintBit64Index\/\*\*\//g
-
-// %s/PrintBit64Binary\/\*\*\//\/\/PrintBit64Binary\/\*\*\//g
-// %s/\/\/PrintBit64Binary\/\*\*\//PrintBit64Binary\/\*\*\//g

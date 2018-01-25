@@ -95,7 +95,16 @@ void BaseChar2Binary8B(char*, uint32_t, uint8_t*);
 /// 0101 0[10]0 - T
 /// 0100 1[11]0 - N (G)
 inline
-void RC_BaseChar2Binary64B(uint64_t* binary_seq, uint64_t size_seq, uint64_t *binary_seq_rc);
+void BaseChar2Binary64B_RC(uint64_t* binary_seq, uint64_t size_seq, uint64_t *binary_seq_rc);
+
+        /// Version 1: Streamed from BaseChar2Binary8B (as benchmark)
+        void BaseChar2Binary8B_RC(uint8_t *bin, uint32_t size, uint8_t *bin_rc);
+
+
+        /// Version 2: Read again.
+        inline
+        void BaseChar2Binary8B_RC(char *buffer, uint32_t size, uint8_t *bin);
+
 
 void NaiveBaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq);
 

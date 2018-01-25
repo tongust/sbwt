@@ -22,5 +22,6 @@ int main(int argc, char **argv)
         string reads_filename = string(argv[1]);
         string prefix_filename = string(argv[2]);
         sbwt::BuildIndexRawData build_index(prefix_filename);
+
         return 0;
 }

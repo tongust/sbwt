@@ -64,6 +64,27 @@ uint8_t rcCharToDna5[] = {
                 /* 240 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 };
 
+        /*
+         * Look-up table: reverse complement byte-wise
+         */
+        const uint8_t Array256Swap2bitTableComplement[256] = {
+                        170,234,42,106,186,250,58,122,138,202,10,74,154,218,26,90,
+                        174,238,46,110,190,254,62,126,142,206,14,78,158,222,30,94,
+                        162,226,34,98,178,242,50,114,130,194,2,66,146,210,18,82,
+                        166,230,38,102,182,246,54,118,134,198,6,70,150,214,22,86,
+                        171,235,43,107,187,251,59,123,139,203,11,75,155,219,27,91,
+                        175,239,47,111,191,255,63,127,143,207,15,79,159,223,31,95,
+                        163,227,35,99,179,243,51,115,131,195,3,67,147,211,19,83,
+                        167,231,39,103,183,247,55,119,135,199,7,71,151,215,23,87,
+                        168,232,40,104,184,248,56,120,136,200,8,72,152,216,24,88,
+                        172,236,44,108,188,252,60,124,140,204,12,76,156,220,28,92,
+                        160,224,32,96,176,240,48,112,128,192,0,64,144,208,16,80,
+                        164,228,36,100,180,244,52,116,132,196,4,68,148,212,20,84,
+                        169,233,41,105,185,249,57,121,137,201,9,73,153,217,25,89,
+                        173,237,45,109,189,253,61,125,141,205,13,77,157,221,29,93,
+                        161,225,33,97,177,241,49,113,129,193,1,65,145,209,17,81,
+                        165,229,37,101,181,245,53,117,133,197,5,69,149,213,21,85
+        };
 /*
  * The table turns over a bite 2-bit-wise. Such 10-00-11-01 to 01-11-00-10
  * */
@@ -169,6 +190,44 @@ void PrintBinary(T c, const std::string &end_str)
                 }
         }
 
+
+        /// Version 1: Streamed from BaseChar2Binary8B (as benchmark)
+        /// One-byte-wise
+        void BaseChar2Binary8B_RC(uint8_t *bin, uint32_t size, uint8_t *bin_rc)
+        {
+                uint32_t size_mod8 = size & 3;// mod 4
+                uint32_t size_8bit = size >> 2;
+                static uint8_t v2[2] = {0};
+                static uint16_t *p = (uint16_t*)v2;
+                static uint16_t &v = *p;
+                static uint8_t &v2_lo = v2[0];
+                if (size_mod8 != 0) {
+                        size_mod8 <<= 1;
+                        //bin_rc += size_8bit;
+                        uint8_t *bin_begin = bin + (size_8bit - 1);
+                        for (uint32_t i = 0; i != size_8bit; ++i) {
+                                v = *((uint16_t *) (bin_begin));
+                                v >>= size_mod8;
+                                *bin_rc++ = Array256Swap2bitTableComplement[v2_lo];
+                                --bin_begin;
+                        }
+                        *bin_rc = Array256Swap2bitTableComplement[*bin];
+                } else {
+                        bin_rc += size_8bit - 1;
+                        for (uint32_t i = size_8bit; i != 0; --i) {
+                                *bin_rc-- = Array256Swap2bitTableComplement[*bin++];
+                        }
+                }
+        }
+
+
+        /// Reverse complement version of BaseChar2Binary8B
+        void BaseChar2Binary8B_RC(char *buffer, uint32_t size, uint8_t *bin)
+        {
+                return;
+        }
+
+
 /* It seems that 'inline' does not work here */
 /* TODO should be included */
 void BaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq)
@@ -216,7 +275,7 @@ void BaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq
 /// 0100 0[11]1 - G
 /// 0101 0[10]0 - T
 /// 0100 1[11]0 - N (G)
-void RC_BaseChar2Binary64B(uint64_t* binary_seq, uint64_t size_seq, uint64_t *binary_seq_rc)
+void BaseChar2Binary64B_RC(uint64_t* binary_seq, uint64_t size_seq, uint64_t *binary_seq_rc)
 {
         int n           = size_seq >> 5;
         int tail        = (size_seq % 32)<<1;

@@ -40,12 +40,13 @@ BuildIndexRawData::BuildIndexRawData (char *seq_dna, size_t n, const uint32_t &p
         length_ref(n),
         num_block_sort(nb),
         period(per)
-{  
+{
 
 	num_dollar = period - (length_ref % period);
 	length_ref += num_dollar;
         /// TODO Bad idea to use realloc()
         /// How to free memory created by realloc(), free() or delete[]?
+        /// Suggestion: use alloc and free
 	seq_raw = (char *)realloc(seq_dna, length_ref*sizeof(char));
 
 	for (uint32_t i = 0; i < num_dollar; ++i) {
