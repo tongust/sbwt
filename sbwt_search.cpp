@@ -578,7 +578,7 @@ namespace sbwt
         }
 
         reads_buffer::reads_buffer():
-                length_buffer(MAX_READS_BINARY_LENGTH+1),
+                length_buffer(MAX_READS_LENGTH+1),
                 length_read(0),
                 file_stream(nullptr)
         {
@@ -586,7 +586,7 @@ namespace sbwt
         }
 
         reads_buffer::reads_buffer(char *fn, uint32_t size):
-                length_buffer(MAX_READS_BINARY_LENGTH+1),
+                length_buffer(MAX_READS_LENGTH+1),
                 length_read(0)
         {
                 file_name.resize(size);
@@ -595,7 +595,7 @@ namespace sbwt
         }
 
         reads_buffer::reads_buffer(const string &fn):
-                length_buffer(MAX_READS_BINARY_LENGTH+1),
+                length_buffer(MAX_READS_LENGTH+1),
                 length_read(0)
         {
                 file_name = fn;

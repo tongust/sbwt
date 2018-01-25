@@ -193,6 +193,7 @@ void PrintBinary(T c, const std::string &end_str)
 
         /// Version 1: Streamed from BaseChar2Binary8B (as benchmark)
         /// One-byte-wise
+        /// Profile 100%
         void BaseChar2Binary8B_RC(uint8_t *bin, uint32_t size, uint8_t *bin_rc)
         {
                 uint32_t size_mod8 = size & 3;// mod 4
@@ -203,7 +204,6 @@ void PrintBinary(T c, const std::string &end_str)
                 static uint8_t &v2_lo = v2[0];
                 if (size_mod8 != 0) {
                         size_mod8 <<= 1;
-                        //bin_rc += size_8bit;
                         uint8_t *bin_begin = bin + (size_8bit - 1);
                         for (uint32_t i = 0; i != size_8bit; ++i) {
                                 v = *((uint16_t *) (bin_begin));
@@ -211,7 +211,7 @@ void PrintBinary(T c, const std::string &end_str)
                                 *bin_rc++ = Array256Swap2bitTableComplement[v2_lo];
                                 --bin_begin;
                         }
-                        *bin_rc = Array256Swap2bitTableComplement[*bin];
+                        *bin_rc = Array256Swap2bitTableComplement[(*bin)] >> (8-size_mod8);
                 } else {
                         bin_rc += size_8bit - 1;
                         for (uint32_t i = size_8bit; i != 0; --i) {
@@ -220,11 +220,52 @@ void PrintBinary(T c, const std::string &end_str)
                 }
         }
 
-
-        /// Reverse complement version of BaseChar2Binary8B
+        static const char DnaCharMapReverseComplement[256] = {
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 84, 0, 71, 0, 0, 0, 67, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 65, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        };
+        /// Version 2: reverse the dnas and then use BaseChar2Binary8B
+        /// Profile 41%
         void BaseChar2Binary8B_RC(char *buffer, uint32_t size, uint8_t *bin)
         {
-                return;
+                static char *p_end = nullptr;
+                static char *p = nullptr;
+                static char *p0 = nullptr;
+
+                p0 = buffer;
+                p_end = buffer + ( (size+1) >> 1 );
+                p = buffer + (size - 1);
+
+                for (; buffer != p_end; ) { static char tmp = 0; tmp = DnaCharMapReverseComplement[*buffer]; *buffer++ = DnaCharMapReverseComplement[*p]; *p-- = tmp; }
+                size = size & 3 == 0 ? size >> 2 : (size >> 2) + 1;
+                BaseChar2Binary8B(p0, size, bin);
+        }
+
+
+        /// Version 3: turned from dnas sequence as BaseChar2Binary8B does.
+        void BaseChar2Binary8B_RC_Exter(
+                        char *buffer,
+                        uint8_t *bin,
+                        uint32_t size_char,
+                        uint32_t size_bin,
+                        uint32_t mod_8,
+                        uint32_t mod_8_r
+        )
+        {
         }
 
 

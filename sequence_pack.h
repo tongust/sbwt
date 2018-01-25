@@ -100,10 +100,11 @@ void BaseChar2Binary64B_RC(uint64_t* binary_seq, uint64_t size_seq, uint64_t *bi
         /// Version 1: Streamed from BaseChar2Binary8B (as benchmark)
         void BaseChar2Binary8B_RC(uint8_t *bin, uint32_t size, uint8_t *bin_rc);
 
-
-        /// Version 2: Read again.
-        inline
+        /// Version 2: reverse the dnas and then use BaseChar2Binary8B
         void BaseChar2Binary8B_RC(char *buffer, uint32_t size, uint8_t *bin);
+
+        /// Version 3: turned from dnas sequence as BaseChar2Binary8B does.
+        void BaseChar2Binary8B_RC_Exter(char *buffer, uint8_t *bin, uint32_t size_char, uint32_t size_bin, uint32_t mod_8, uint32_t mod_8_r);
 
 
 void NaiveBaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq);
