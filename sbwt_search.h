@@ -48,6 +48,7 @@ namespace sbwt
         void TestBit64Map(const std::string&, const std::string&);
         void TestBit8Map(const std::string&, const std::string&);
         void TestNaiveMap(const std::string&, const std::string&);
+        void TestBaseChar2BinaryReverseComplement(char **argv);
 #endif /* SBWT_VERBOSE */
 
         class reads_buffer

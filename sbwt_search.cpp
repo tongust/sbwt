@@ -566,6 +566,65 @@ namespace sbwt
 
         }
 
+        /// Test: read the dnas string and transform them into bits reverse-complemently.
+        void TestBaseChar2BinaryReverseComplement(char **argv)
+        {
+                using std::string;
+                using std::shared_ptr;
+                using sbwt::reads_buffer;
+                using std::cout;
+                using std::endl;
+                using std::bitset;
+
+                string file_fasta(argv[1]);
+                string file_index(argv[2]);
+
+                reads_buffer rb_fasta(file_fasta);
+                reads_buffer rb_index(file_index);
+
+                rb_index.ReadNext();
+                rb_index.ReadNext();
+
+                uint32_t size_ref_8bit = rb_index.length_read;
+                uint32_t size_ref_char = rb_index.length_read;
+
+                size_ref_8bit = size_ref_8bit % 4 == 0 ? size_ref_8bit >> 2 : (size_ref_8bit>>2) + 1;
+
+                shared_ptr<uint8_t > ref_bin_sptr(new uint8_t[size_ref_char+1024]);
+                shared_ptr<uint8_t > ref_bin_rc_sptr(new uint8_t[size_ref_char+1024]);
+                shared_ptr<uint8_t > ref_bin_rc_sptr1(new uint8_t[size_ref_char+1024]);
+
+                uint8_t *ref_bin_ptr = ref_bin_sptr.get();
+                uint8_t *ref_bin_rc_ptr = ref_bin_rc_sptr.get();
+                uint8_t *ref_bin_rc_ptr1 = ref_bin_rc_sptr1.get();
+
+                /// method 1
+                sbwtio::BaseChar2Binary8B(rb_index.buffer, size_ref_8bit, ref_bin_ptr);
+                //sbwtio::BaseChar2Binary8B_RC(ref_bin_ptr, size_ref_char, ref_bin_rc_ptr);
+
+                /// method 2
+                //sbwtio::BaseChar2Binary8B_RC(rb_index.buffer, size_ref_char, ref_bin_rc_ptr1);
+
+                uint32_t size_char = rb_index.length_read;
+                uint32_t mod_4_by2 = (size_char & 3) << 1;
+                uint32_t mod_4_r_by2 = 8 - mod_4_by2;
+                uint32_t size_8bit = mod_4_by2 ? (size_char>>2) + 1 : size_char >> 2;
+                //sbwtio::BaseChar2Binary8B_RC_Exter(rb_index.buffer, ref_bin_rc_ptr1, size_char, size_8bit, mod_4_by2, mod_4_r_by2);
+
+
+                //for (uint32_t i = 0; i != size_8bit; ++i) { cout << bitset<8>(ref_bin_rc_ptr[i]) << ", "; } cout << endl;
+                //for (uint32_t i = 0; i != size_8bit; ++i) { cout << bitset<8>(ref_bin_rc_ptr1[i]) << ", "; } cout << endl;
+
+                for (uint32_t i = 1<<24; i != 0; --i) {
+                        /// method 1
+                        ///sbwtio::BaseChar2Binary8B_RC(ref_bin_ptr, size_ref_char, ref_bin_rc_ptr);
+                        /// method 2
+                        //sbwtio::BaseChar2Binary8B_RC(rb_index.buffer, size_ref_char, ref_bin_rc_ptr1);
+                        /// method 3
+                        sbwtio::BaseChar2Binary8B_RC_Exter(rb_index.buffer, ref_bin_rc_ptr1, size_char, size_8bit, mod_4_by2, mod_4_r_by2);
+                }
+        }
+
 #endif /* SBWT_VERBOSE */
 
         bitset64::bitset64(uint64_t *nums, uint32_t size): flag(1)

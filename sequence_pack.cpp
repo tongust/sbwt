@@ -65,7 +65,7 @@ uint8_t rcCharToDna5[] = {
 };
 
         /*
-         * Look-up table: reverse complement byte-wise
+         * Look-up table: reverse complement byte-wise. Such 10-00-11-01 to 11-01-10-00
          */
         const uint8_t Array256Swap2bitTableComplement[256] = {
                         170,234,42,106,186,250,58,122,138,202,10,74,154,218,26,90,
@@ -257,15 +257,47 @@ void PrintBinary(T c, const std::string &end_str)
 
 
         /// Version 3: turned from dnas sequence as BaseChar2Binary8B does.
+        /// size_char must be not less than 4.
+        /// Profile 79%
         void BaseChar2Binary8B_RC_Exter(
                         char *buffer,
                         uint8_t *bin,
                         uint32_t size_char,
-                        uint32_t size_bin,
-                        uint32_t mod_8,
-                        uint32_t mod_8_r
+                        uint32_t size_8bit,
+                        uint32_t mod_4_by2,         /* need multiplyied by 2 */
+                        uint32_t mod_4_r_by2        /* need multiplyied by 2 */
         )
         {
+                static uint8_t array[4] = {0};
+                static uint32_t &c = *((uint32_t*)array);
+                if (mod_4_by2) {
+                        uint32_t *p_end = (uint32_t*)buffer;
+                        uint32_t *p = (uint32_t*)(buffer + (size_char - 4));
+                        uint8_t *bin_end = bin + (size_8bit-1);
+                        for (; bin != bin_end;) {
+                                c = ((*p) >> 1) & 0x03030303;
+                                c |= (c >> 6);
+                                c |= c >> 12;
+                                *bin = Array256Swap2bitTableComplement[array[0]];
+                                --p;
+                                ++bin;
+                        }
+                        /// the last one
+                        c = ((*p_end) >> 1) & 0x03030303;
+                        c |= (c >> 6);
+                        c |= c >> 12;
+                        *bin = Array256Swap2bitTableComplement[array[0]] >> mod_4_r_by2;
+                } else {
+                        uint32_t *p = (uint32_t*)buffer;
+                        uint32_t *p_end = p + size_8bit;
+                        bin += (size_8bit-1);
+                        for (; p != p_end; ++p) {
+                                c = ((*p) >> 1) & 0x03030303;
+                                c |= (c >> 6);
+                                c |= c >> 12;
+                                *bin-- = Array256Swap2bitTableComplement[array[0]];
+                        }
+                }
         }
 
 

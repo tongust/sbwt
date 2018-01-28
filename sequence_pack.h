@@ -62,8 +62,8 @@ extern const uint8_t Array256Swap2bitTable[256];
         x = (x & 0x3F)
 #endif
 
-template <typename T>
-void PrintBinary(T c, const std::string &end_str = "\n");
+        template <typename T>
+        void PrintBinary(T c, const std::string &end_str = "\n");
 
 /// 0100 0[00]1 - A
 /// 0100 0[01]1 - C
@@ -83,10 +83,10 @@ void PrintBinary(T c, const std::string &end_str = "\n");
         c |= c >> 24
 
 
-/* It seems that 'inline' does not work here */
-/* TODO should be included */
-void BaseChar2Binary64B(char*, uint64_t, uint64_t*);
-void BaseChar2Binary8B(char*, uint32_t, uint8_t*);
+        /* It seems that 'inline' does not work here */
+        /* TODO should be included */
+        void BaseChar2Binary64B(char*, uint64_t, uint64_t*);
+        void BaseChar2Binary8B(char*, uint32_t, uint8_t*);
 
 /* Reverse Complement version */
 /// 0100 0[00]1 - A
@@ -94,8 +94,7 @@ void BaseChar2Binary8B(char*, uint32_t, uint8_t*);
 /// 0100 0[11]1 - G
 /// 0101 0[10]0 - T
 /// 0100 1[11]0 - N (G)
-inline
-void BaseChar2Binary64B_RC(uint64_t* binary_seq, uint64_t size_seq, uint64_t *binary_seq_rc);
+        void BaseChar2Binary64B_RC(uint64_t* binary_seq, uint64_t size_seq, uint64_t *binary_seq_rc);
 
         /// Version 1: Streamed from BaseChar2Binary8B (as benchmark)
         void BaseChar2Binary8B_RC(uint8_t *bin, uint32_t size, uint8_t *bin_rc);
@@ -104,10 +103,9 @@ void BaseChar2Binary64B_RC(uint64_t* binary_seq, uint64_t size_seq, uint64_t *bi
         void BaseChar2Binary8B_RC(char *buffer, uint32_t size, uint8_t *bin);
 
         /// Version 3: turned from dnas sequence as BaseChar2Binary8B does.
-        void BaseChar2Binary8B_RC_Exter(char *buffer, uint8_t *bin, uint32_t size_char, uint32_t size_bin, uint32_t mod_8, uint32_t mod_8_r);
+        void BaseChar2Binary8B_RC_Exter(char *buffer, uint8_t *bin, uint32_t size_char, uint32_t size_8bit, uint32_t mod_4_by2, uint32_t mod_4_r_by2);
 
-
-void NaiveBaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq);
+        void NaiveBaseChar2Binary64B(char *buffer, uint64_t size_buffer, uint64_t* binary_seq);
 
 } /* namespace sbwtio */
 #endif /* SBWT_SEQUENCE_PACK_H */
