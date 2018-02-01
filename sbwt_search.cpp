@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "sbwt_search.h"
+#include "sbwt.h"
 #include "sequence_pack.h"
 #include "log.h"
 
@@ -742,6 +743,20 @@ namespace sbwt
                 }
                 */
                 --length_read;
+        }
+
+        void Search(char **argv)
+        {
+                /// Build index from files
+                string reads_filename = string(argv[1]);
+                string prefix_filename = string(argv[2]);
+                BuildIndexRawData build_index(prefix_filename);
+                sbwt::PrintFullSearchMatrix(build_index);
+
+                /// reads
+                reads_buffer rb_reads(reads_filename);
+
+
         }
 
 } /* namespace sbwt */

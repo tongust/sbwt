@@ -19,9 +19,7 @@ int main(int argc, char **argv)
                 return 1;
         }
 
-        string reads_filename = string(argv[1]);
-        string prefix_filename = string(argv[2]);
-        sbwt::BuildIndexRawData build_index(prefix_filename);
+        sbwt::Search(argv);
 
         return 0;
 }

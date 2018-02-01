@@ -76,6 +76,9 @@ namespace sbwt
                 void Init();
                 void Dispose();
         };
+
+
+        void Search(char **);
 } /* namespace sbwt */
 
 #endif /* SBWT_SEARCH_H */

@@ -31,8 +31,11 @@ char *Extract(char *seq, const uint32_t &seq_size, uint32_t &trimmed_length)
                 }
                 ++ptr;
         }
-        
-        char *ret_ptr = new char[total_num];
+
+        /// enough memory for $s and "boarder case"
+        /// And the period must be less than 1024
+        /// In case the boarder of sequence array will be reached.
+        char *ret_ptr = new char[((total_num/1024)+4)*1024];
 
         char *ptr0 = ret_ptr;
         ptr = seq;
@@ -66,7 +69,7 @@ char *ReadFasta(char *file_name, uint32_t &read_length)
                 string_length = ftell(handler); /* Calculate the offset from head to tail */
                 rewind(handler);                /* Back to the head */
 
-                // buffer = (char *) malloc(sizeof(char) * (string_length + 1));
+                //buffer = (char *) malloc(sizeof(char) * (string_length + 1));
                 buffer = new char[sizeof(char) * (string_length + 1)];
                 read_length = 0;
                 read_length = fread(buffer, sizeof(char), string_length, handler);

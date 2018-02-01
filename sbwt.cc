@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include <algorithm>
+#include <bitset>
 #include <chrono>
 #include <cstring>
 #include <iostream>
@@ -39,19 +40,28 @@ BuildIndexRawData::BuildIndexRawData (char *seq_dna, size_t n, const uint32_t &p
 	seq_raw(seq_dna),
         length_ref(n),
         num_block_sort(nb),
-        period(per)
+        period(per),
+        bin_8bit(nullptr),
+        size_bin_8bit(0)
 {
+
+        if (period > 1024) {
+                period = 1024;
+                logger::LogError("The period must be less than 1024.");
+        }
 
 	num_dollar = period - (length_ref % period);
 	length_ref += num_dollar;
         /// TODO Bad idea to use realloc()
         /// How to free memory created by realloc(), free() or delete[]?
         /// Suggestion: use alloc and free
-	seq_raw = (char *)realloc(seq_dna, length_ref*sizeof(char));
+        /// Update: no need to use malloc, there is enough space for $s, however the upper-bound of period is
+        /// set to 1024.
+	/// seq_raw = (char *)realloc(seq_dna, length_ref*sizeof(char));
 
 	for (uint32_t i = 0; i < num_dollar; ++i) {
 		seq_raw[length_ref-i-1] = '$';
-	}		 
+	}
 
 	for (int i = 0; i < 4; ++i) { first_column[i] = 0; }
 
@@ -94,7 +104,7 @@ BuildIndexRawData::BuildIndexRawData(const string &prefix_filename)
         num_block_sort      = readU32(meta_fin, is_big_endian);/* Number of blocks, 4 for 256 */
         num_dollar          = readU32(meta_fin, is_big_endian);/* The # of $s those are appended */
         period              = readU32(meta_fin, is_big_endian);/* The period of sbwt */
-        uint64_t size_packed_seq        = readU32(meta_fin, is_big_endian);/* The size of packed sequence */
+        size_bin_8bit       = readU32(meta_fin, is_big_endian);/* The size of packed sequence */
 
         /// read first column
         for (int i = 0; i != 4; ++i) {
@@ -104,6 +114,8 @@ BuildIndexRawData::BuildIndexRawData(const string &prefix_filename)
         /**
          * Array and sequence
          */
+/// 64-bit packed sequence version
+#if 0
         {
                 std::shared_ptr<uint64_t > binary_seq64_ptr(new uint64_t[size_packed_seq]);
 
@@ -113,6 +125,12 @@ BuildIndexRawData::BuildIndexRawData(const string &prefix_filename)
                         *beg = readU64(array_fin, is_big_endian);
                 }
         }
+#endif
+
+        /// 8-bit version
+        /// Watch out for the boarder
+        bin_8bit = new uint8_t[(size_bin_8bit * 4) + 1024];
+        array_fin.read((char*) bin_8bit, size_bin_8bit*4);
 
         /// The raw sequence
         /// TODO map directly the memory to files
@@ -149,6 +167,7 @@ BuildIndexRawData::BuildIndexRawData(const string &prefix_filename)
 
 }
 
+
 BuildIndexRawData::~BuildIndexRawData()
 {
 
@@ -161,7 +180,13 @@ BuildIndexRawData::~BuildIndexRawData()
 		delete[] occurrence;
         }
 
-	delete[] seq_transformed;
+	if (seq_transformed) {
+                delete[] seq_transformed;
+        }
+
+        if (bin_8bit) {
+                delete[] bin_8bit;
+        }
 }
 
 
@@ -382,6 +407,7 @@ void PrintFullSearchMatrix(BuildIndexRawData &build_index)
 {
         using std::endl;
         using std::cout;
+        using std::bitset;
 
         auto SA = build_index.suffix_array;
         auto X = build_index.seq_raw;
@@ -389,6 +415,15 @@ void PrintFullSearchMatrix(BuildIndexRawData &build_index)
         auto B = build_index.seq_transformed;
         auto O = build_index.occurrence;
         auto C = &build_index.first_column[0];
+
+        if (!X || !SA) return;
+
+        cout << "Length of reference:\t"
+             << build_index.length_ref
+             << endl
+             << "Period:\t"
+             << build_index.period
+             << endl;
 
         auto count10 = [](uint32_t i)->uint32_t{
                 uint32_t ret = 0;
@@ -400,11 +435,20 @@ void PrintFullSearchMatrix(BuildIndexRawData &build_index)
                 return ret;
         };
 
-        if (!X || !SA) return;
-
         cout << "\nRef: " << endl;
+        for (size_t i = 0; i != N; ++i) {
+                cout << X[i];
+                if (i % 4 == 3 && i + 1 != N) cout << "     ";
+        } cout << endl;
 
-        for (size_t i = 0; i != N; ++i) cout << X[i];
+        if (build_index.bin_8bit) {
+                for (int k = 0; k != 4; ++k) {
+                        uint32_t lmd_i = (k+1)*build_index.size_bin_8bit;
+                        for (uint32_t i = k*build_index.size_bin_8bit; i != lmd_i; ++i) {
+                                cout << bitset<8>(build_index.bin_8bit[i]) << " ";
+                        } cout << endl;
+                }
+        }
 
         cout << endl << "i\tSA\tFM\tBWT\n \t ";
 

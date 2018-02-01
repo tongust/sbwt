@@ -37,8 +37,9 @@ void WriteIntoDiskBuildIndex(sbwt::BuildIndexRawData &build_index, const string 
         std::ofstream array_fout(file_array_filename.c_str(), std::ios::binary);
         std::ofstream meta_fout(file_meta_filename.c_str(), std::ios::binary);
 
-        uint64_t size_packed_seq = build_index.length_ref / 32;
-        size_packed_seq += 8;
+        uint32_t size_packed_seq_8bit = build_index.length_ref / 4;
+        size_packed_seq_8bit += build_index.length_ref % 4 == 0 ? 0 : 1;
+        ///uint64_t size_packed_seq = build_index.length_ref / 32;
 
         /**
          * Meta information
@@ -49,7 +50,7 @@ void WriteIntoDiskBuildIndex(sbwt::BuildIndexRawData &build_index, const string 
         writeU32(meta_fout, build_index.num_block_sort, is_bigendian);  /* Number of blocks, 4 for 256 */
         writeU32(meta_fout, build_index.num_dollar, is_bigendian);      /* The # of $s those are appended */
         writeU32(meta_fout, build_index.period, is_bigendian);          /* The period of sbwt */
-        writeU32(meta_fout, size_packed_seq, is_bigendian);             /* The size of packed sequence */
+        writeU32(meta_fout, size_packed_seq_8bit, is_bigendian);        /* The size of packed sequence */
 
         /// write first column
         for (int i = 0; i != 4; ++i) {
@@ -59,6 +60,8 @@ void WriteIntoDiskBuildIndex(sbwt::BuildIndexRawData &build_index, const string 
         /**
          * Array and sequence
          */
+/// 64-bit version
+# if 0
         {
                 std::shared_ptr<uint64_t > binary_seq64_ptr(new uint64_t[size_packed_seq]);
                 sbwtio::BaseChar2Binary64B(build_index.seq_raw, build_index.length_ref, binary_seq64_ptr.get());
@@ -68,7 +71,21 @@ void WriteIntoDiskBuildIndex(sbwt::BuildIndexRawData &build_index, const string 
                 for (;beg != end; ++beg) {
                         writeU64(array_fout, *beg);
                 }
-                beg = end = nullptr;
+        }
+#endif
+        /// 8-bit version
+        {
+                /// Watch out for the boarder
+                std::shared_ptr<uint8_t > binary_8bit_sptr(new uint8_t[(size_packed_seq_8bit * 4) + 1024]);
+
+                for (int i = 0; i != 4; ++i) {
+                        sbwtio::BaseChar2Binary8B(build_index.seq_raw + i,
+                                                  size_packed_seq_8bit,
+                                                  binary_8bit_sptr.get() + i*size_packed_seq_8bit);
+
+                        array_fout.write((const char*)(binary_8bit_sptr.get() + i*size_packed_seq_8bit),
+                                         size_packed_seq_8bit);
+                }
         }
 
         /// The raw sequence

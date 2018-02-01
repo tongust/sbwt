@@ -27,8 +27,9 @@ using std::string;
 
 struct BuildIndexRawData{
 	BuildIndexRawData();
+        /// Build index block-wise
 	BuildIndexRawData(char*, size_t, const uint32_t &, const uint32_t&);
-        /// Build index from reading files
+        /// Build index from index files
         BuildIndexRawData(const string&);
 	~BuildIndexRawData();
 	char *seq_raw;			/* Reference sequence */
@@ -41,6 +42,9 @@ struct BuildIndexRawData{
 	uint32_t num_block_sort;	/* Number of blocks, 4 for 256 */
 	uint32_t num_dollar;		/* The number of $s those are appended to the tail of reference sequence */
 	uint32_t period;		/* The period for sbwt. 1 is used for normal bwt */
+
+        uint8_t *bin_8bit;              /* 8-bit-packed binary sequence */
+        uint32_t size_bin_8bit;         /* Length of packed binary sequence */
 };
 
 void SortSbwt(char*, uint32_t*, uint32_t, uint32_t, uint32_t, const uint32_t&, const uint32_t&);

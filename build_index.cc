@@ -12,12 +12,10 @@
 
 using std::shared_ptr;
 using std::string;
-
+using namespace utility;
 
 int main(int argc, char **argv)
 {
-        using namespace utility;
-
         if (argc != 3) {
                 PrintHelp_BuildIndex(argc, argv);
                 return 1;

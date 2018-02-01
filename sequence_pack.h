@@ -88,12 +88,12 @@ extern const uint8_t Array256Swap2bitTable[256];
         void BaseChar2Binary64B(char*, uint64_t, uint64_t*);
         void BaseChar2Binary8B(char*, uint32_t, uint8_t*);
 
-/* Reverse Complement version */
-/// 0100 0[00]1 - A
-/// 0100 0[01]1 - C
-/// 0100 0[11]1 - G
-/// 0101 0[10]0 - T
-/// 0100 1[11]0 - N (G)
+        /* Reverse Complement version */
+        /// 0100 0[00]1 - A
+        /// 0100 0[01]1 - C
+        /// 0100 0[11]1 - G
+        /// 0101 0[10]0 - T
+        /// 0100 1[11]0 - N (G)
         void BaseChar2Binary64B_RC(uint64_t* binary_seq, uint64_t size_seq, uint64_t *binary_seq_rc);
 
         /// Version 1: Streamed from BaseChar2Binary8B (as benchmark)
