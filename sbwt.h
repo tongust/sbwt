@@ -53,6 +53,7 @@ void BuildIndex(BuildIndexRawData&);
 void BuildIndexBlockwise(BuildIndexRawData&);
 void CountOccurrence(BuildIndexRawData&);
 void PrintFullSearchMatrix(BuildIndexRawData&);
+void PrintFullSearchMatrix(uint32_t *SA, char *X, uint32_t N, uint32_t period);
 void SortSbwt(BuildIndexRawData&);
 void SortSbwtBlockwise( char*, uint32_t*, uint32_t, uint32_t, uint32_t, const uint32_t&, const uint32_t&, const uint32_t&);
 void SortSbwtBlockwise(BuildIndexRawData&);

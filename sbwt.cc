@@ -317,7 +317,9 @@ void Transform(BuildIndexRawData &build_index)
         for (size_t i = 0; i != build_index.length_ref; ++i) {
                 tmpval = *sa;
                 if (tmpval < build_index.period) {
-                        *seq = '$';
+                        /// Bug here. Feb-02
+                        //*seq = '$';
+                        *seq = build_index.seq_raw[tmpval + build_index.length_ref - build_index.period];
                 } else {
                         *seq = build_index.seq_raw[tmpval - build_index.period];
                 }
@@ -494,6 +496,69 @@ void PrintFullSearchMatrix(BuildIndexRawData &build_index)
         cout << "\n";
         }
 }
+
+
+void PrintFullSearchMatrix(uint32_t *SA, char *X, uint32_t N, uint32_t period)
+{
+        using std::endl;
+        using std::cout;
+        using std::bitset;
+
+        if (!X || !SA) return;
+
+        cout << "Length of reference:\t"
+             << N
+             << endl
+             << "Period:\t"
+             << period
+             << endl;
+
+        auto count10 = [](uint32_t i)->uint32_t{
+                uint32_t ret = 0;
+                for (;;) {
+                        i /= 10;
+                        if (i==0) break;
+                        ++ret;
+                }
+                return ret;
+        };
+
+        cout << "\nRef: " << endl;
+        for (size_t i = 0; i != N; ++i) {
+                cout << X[i];
+                if (i % 4 == 3 && i + 1 != N) cout << "     ";
+        } cout << endl;
+
+        cout << endl << "i\tSA\tFM\tBWT\n \t ";
+
+        int tcc = 0;
+        for (size_t i = 0; i != N; ++i) {
+                if (i%5 == 0) {
+                        cout << "\t" <<  i;
+                        tcc = count10(i);
+                }
+                else {
+                        if (tcc<=0) cout << " ";
+                        else --tcc;
+                }
+        }
+        cout << endl;
+
+        for (size_t i = 0; i != N; ++i) {
+                cout << i << "\t" << SA[i] <<"\t";
+                uint32_t j = 0;
+                for (j = 0; j < N-1; ++j) {
+                        if (j && j%5 == 0) cout << "\t";
+                        cout << X[(j+SA[i])%N];
+                }
+                j = N - 1;
+                if (j%5 == 0)cout << "\t";
+                cout << "" << X[(j+SA[i])%N];
+                cout << endl;
+        }
+}
+
+
 /**Build sbwt index blockwise for large genomes such homo, however the max length
  * should be less than 4G. Otherwise, you should split the reference into muliple
  * partation.
@@ -554,7 +619,8 @@ void SortSbwtBlockwise(
         )
 {
 	/* Condition of end */
-	if (depth >= num_block /* Condition for blockwise-building */|| begin+1 >= end || depth >= length_ref) return;
+        ///Bug: depth >= num_block
+	if (depth >= step*num_block /* Condition for blockwise-building */|| begin+1 >= end || depth >= length_ref) return;
 
 	int64_t a = 0, b = 0, c = 0,
 		d = 0, r = 0, v = 0,
