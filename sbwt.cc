@@ -9,6 +9,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <iomanip>
 #include <vector>
 
 #include "sbwt.h"
@@ -417,13 +418,14 @@ void PrintFullSearchMatrix(BuildIndexRawData &build_index)
         auto B = build_index.seq_transformed;
         auto O = build_index.occurrence;
         auto C = &build_index.first_column[0];
+        auto T = build_index.period;
 
         if (!X || !SA) return;
 
-        cout << "Length of reference:\t"
+        cout << "\033[0;33mLength of reference:\033[0m\t"
              << build_index.length_ref
              << endl
-             << "Period:\t"
+             << "\033[0;33mPeriod:\033[0m\t"
              << build_index.period
              << endl;
 
@@ -437,7 +439,7 @@ void PrintFullSearchMatrix(BuildIndexRawData &build_index)
                 return ret;
         };
 
-        cout << "\nRef: " << endl;
+        cout << "\033[0;33mRef:\033[0m" << endl;
         for (size_t i = 0; i != N; ++i) {
                 cout << X[i];
                 if (i % 4 == 3 && i + 1 != N) cout << "     ";
@@ -452,32 +454,33 @@ void PrintFullSearchMatrix(BuildIndexRawData &build_index)
                 }
         }
 
-        cout << endl << "i\tSA\tFM\tBWT\n \t ";
-
-        int tcc = 0;
-        for (size_t i = 0; i != N; ++i) {
-                if (i%5 == 0) {
-                        cout << "\t" <<  i;
-                        tcc = count10(i);
+        cout << endl << "\033[0;33mi\tSA\tFM\n\033[0m";
+        const int print_width = 10;
+        cout << "\t\t";
+        std::cout.fill(' ');
+        for (uint32_t i = 0; i != N; ++i) {
+                if (i % print_width == 0) {
+                        std::cout.width(print_width);
+                        cout << std::left << i;
                 }
-                else {
-                        if (tcc<=0) cout << " ";
-                        else --tcc;
-                }
-        }
-        cout << endl;
+        } cout << endl;
 
         for (size_t i = 0; i != N; ++i) {
                 cout << i << "\t" << SA[i] <<"\t";
                 uint32_t j = 0;
-                for (j = 0; j < N-1; ++j) {
-                        if (j && j%5 == 0) cout << "\t";
-                        cout << X[(j+SA[i])%N];
-                }
-                j = N - 1;
-                if (j%5 == 0)cout << "\t";
-                cout << "" << X[(j+SA[i])%N];
-                cout << endl;
+                for (j = 0; j <= N-1; ++j) {
+                        //if (j && j%print_width == 0) cout << "\t";
+                        if (j + SA[i] >= N) {
+                                cout << "\033[0;30m" << X[(j+SA[i])%N] << "\033[0m";
+                                continue;
+                        }
+                        if (j % T == 0) {
+                                cout << "\033[1;31m" << X[(j+SA[i])%N] << "\033[0m";
+                        }
+                        else {
+                                cout << "\033[0;40m" << X[(j+SA[i])%N] << "\033[0m";
+                        }
+                } cout << endl;
         }
         cout << "\nspaced BWT:\n";
         if (B!= nullptr) {
