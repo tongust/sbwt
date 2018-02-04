@@ -16,5 +16,6 @@ void PrintHelp_BuildIndex(int, char**);
 void PrintHelp_CountOcc(int, char**);
 void PrintHelp_SbwtAligner(int, char**);
 void PrintHelp_SbwtTestBitset(int, char **);
+void PrintHelp_SbwtTestExactMatch(int, char**);
 } /* namespace utility */
 #endif /* SBWT_UTILITY_H */

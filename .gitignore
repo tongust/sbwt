@@ -2,7 +2,7 @@
 sbwt
 build_index
 count_occ
-sbwt_test_bitset
+sbwt_test
 *.o
 *.a
 *.so

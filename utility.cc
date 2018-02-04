@@ -161,31 +161,40 @@ void CountSeedOccurrence(sbwt::BuildIndexRawData &build_index, uint32_t seed_len
 
 void PrintHelp_BuildIndex(int argc, char **argv)
 {
-        using std::cout;
-        using std::endl;
-        cout << "usage: build_index [period] [fa]" << endl;
+        cout << "usage: build_index [period] [fa]"
+             << endl;
 }
 
 void PrintHelp_CountOcc(int argc, char **argv)
 {
-        using std::cout;
-        using std::endl;
-        cout << "usage: count_occ [prefix name of index files] [seed_length]" << endl;
+        cout << "usage: count_occ "
+             << "[prefix name of index files] [seed_length]"
+             << endl;
 }
         
 void PrintHelp_SbwtAligner(int argc, char **argv)
 {
-        using std::cout;
-        using std::endl;
-        cout << "usage: sbwt  [fasta file] [prefix of index files]" << endl;
+        cout << "usage: sbwt "
+             << "[fasta file] [prefix of index files]"
+             << endl;
 
 }
 
-        void PrintHelp_SbwtTestBitset(int argc, char **argv)
-        {
-                using std::cout;
-                using std::endl;
-                cout << "usage: sbwt_test_bitset [fasta file] [prefix of index files] [option<1: 64bit; 2: 8bit; otherwise: naive>]" << endl;
-        }
+
+void PrintHelp_SbwtTestBitset(int argc, char **argv)
+{
+        cout << "usage: sbwt_test(test bit set)[fasta file]"
+             << "[prefix of index files] [option<1: 64bit; "
+             << "2: 8bit; otherwise: naive>]"
+             << endl;
+}
+
+
+void PrintHelp_SbwtTestExactMatch(int argc, char **argv)
+{
+        cout << "usage: sbwt_test(test exact match) "
+             << "[reads.fa] [index]"
+             << endl;
+}
 
 } /* namespace utility */

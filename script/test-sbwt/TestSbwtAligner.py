@@ -1,4 +1,5 @@
 import os
+import random
 
 
 def prepare_data(num_test):
@@ -52,7 +53,7 @@ def check_nums(r, f):
     return c
 
 
-if __name__ == '__main__':
+def test_bitset():
     num_test = 10000000
     prepare_data(num_test)
     print("Test "+str(num_test) + " reads")
@@ -63,3 +64,130 @@ if __name__ == '__main__':
     c = check_nums(r, f)
 
     print("Number of mismatches: " + str(c))
+
+
+def gen_reads(period, ref, reads):
+    num_reads = 10
+    fopen = open(reads, 'w')
+    with open(ref) as mf:
+        for ml in mf:
+            if ml.startswith(">"):
+                continue
+            else:
+                ml = ml.rstrip("\n")
+                size = len(ml)
+                for i in xrange(0, size - period*128):
+                    line = ""
+                    first = True
+                    for j in xrange(0, 128):
+                        # with error
+                        if random.randrange(0, 10) > 5 and first:
+                            line += "A"
+                            first = False
+                        else:
+                            line += ml[i+j*period]
+                    fopen.write(">\n")
+                    fopen.write(line+"\n")
+
+                    num_reads -= 1
+                    if num_reads < 0:
+                        break
+
+    fopen.close()
+
+
+def spaced_exact_match(period, ref, reads, res):
+    fw = open(res, "w")
+
+    q = ""
+    with open(ref) as mf:
+        for ml in mf:
+            if ml.startswith(">"):
+                continue
+            else:
+                q = ml.rstrip("\n")
+
+    size = len(q)
+    with open(reads) as mf:
+        for ml in mf:
+            p = ""
+            if ml.startswith(">"):
+                continue
+            else:
+                p = ml.rstrip('\n')
+            end = size - len(p)
+
+            match_res = []
+
+            for i in xrange(0, end):
+                match = True
+                for j in xrange(0, len(p)):
+                    if p[j] != q[i+j*period]:
+                        match = False
+                        break
+                if match:
+                    match_res.append(i)
+            if len(match_res) == 0:
+                match_res.append(-1)
+            #fw.write(','.join(str(u) for u in match_res))
+            print(','.join(str(u) for u in match_res))
+    return
+
+
+def test_exact_match():
+    flog = open("test.exact.match.log", "w")
+
+    for t in xrange(0,1):
+        os.system("rm -rf genome.fa*")
+
+        num_ref = random.randrange(128*21, 100*1024)
+        period = random.randrange(1, 20)
+        reads = "reads.fa"
+        ref = "genome.fa"
+
+        os.system("python ./GenRandomDnas.py " + str(num_ref) + " > genome.fa")
+        os.system("./build_index " + str(period) + " " + ref)
+        gen_reads(period, ref, reads)
+        #os.system("./sbwt_test reads.fa genome.fa > res.cpp.log")
+        spaced_exact_match(period, ref, reads, "res.py.log")
+        print("cpp-----------"+str(period))
+        os.system("./sbwt_test reads.fa genome.fa")
+
+    flog.close()
+
+
+if __name__ == '__main__':
+    test_exact_match()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
