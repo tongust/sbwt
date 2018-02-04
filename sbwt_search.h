@@ -17,7 +17,9 @@ namespace sbwt
 
         using std::string;
 
+        /// Variables
         extern const uint32_t FLAG32[32];
+        extern const uint64_t DnaStringRightShiftMaskReverse[32];
 
         class bitset64
         {

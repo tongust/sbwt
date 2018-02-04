@@ -10,6 +10,7 @@
 #include "sbwt.h"
 #include "sequence_pack.h"
 #include "log.h"
+#include "alphabet.h"
 
 namespace sbwt
 {
@@ -282,7 +283,7 @@ namespace sbwt
                 ~0xffffffffffffULL,      ~0x3ffffffffffffULL,     ~0xfffffffffffffULL,     ~0x3fffffffffffffULL,
                 ~0xffffffffffffffULL,    ~0x3ffffffffffffffULL,   ~0xfffffffffffffffULL,   ~0x3fffffffffffffffULL
         };
-        static const uint64_t DnaStringRightShiftMaskReverse[32] = {
+        const uint64_t DnaStringRightShiftMaskReverse[32] = {
                 0ULL,                   0x3ULL,                 0xfULL,                 0x3fULL,
                 0xffULL,                0x3ffULL,               0xfffULL,               0x3fffULL,
                 0xffffULL,              0x3ffffULL,             0xfffffULL,             0x3fffffULL,
@@ -753,10 +754,78 @@ namespace sbwt
                 BuildIndexRawData build_index(prefix_filename);
                 sbwt::PrintFullSearchMatrix(build_index);
 
+                uint32_t period = build_index.period;
+                uint32_t N = build_index.length_ref;
+                uint32_t *C = build_index.first_column;
+                uint32_t **Occ = build_index.occurrence;
+                uint32_t *SA = build_index.suffix_array;
+
+                static uint8_t *ref_bin_ptr_array[4] = {nullptr};
+                ref_bin_ptr_array[0] = build_index.bin_8bit;
+                ref_bin_ptr_array[1] = build_index.bin_8bit + 1*build_index.size_bin_8bit;
+                ref_bin_ptr_array[1] = build_index.bin_8bit + 2*build_index.size_bin_8bit;
+                ref_bin_ptr_array[1] = build_index.bin_8bit + 3*build_index.size_bin_8bit;
+
                 /// reads
+                /// Read first segment.
                 reads_buffer rb_reads(reads_filename);
+                rb_reads.ReadNext();/// header
+                rb_reads.ReadNext();/// sequence
 
+                uint32_t size_read_char = rb_reads.length_read;
+                uint32_t size_read_mod4 = size_read_char % 4;
+                uint32_t size_read_bit8 = (size_read_mod4) ? (size_read_char >> 2) + 1 : size_read_char >> 2;
+                uint32_t size_read_mod32 = size_read_char % 32;
+                uint32_t size_read_bit32 = size_read_mod32 ?
+                                           (size_read_char >> 5) + 1:
+                                           size_read_char >> 5;
+                uint32_t size_read_bit32_1 = size_read_bit32 - 1;
+                uint64_t popcount_mask = DnaStringRightShiftMaskReverse[size_read_mod32];
 
+                /// binary buffer for segment
+                uint64_t read_bin_buffer[256] = {0};
+                uint8_t *read_bin = (uint8_t*)read_bin_buffer;
+                uint64_t *p = nullptr;
+                uint64_t *p_end = nullptr;
+                uint64_t *q = read_bin_buffer;
+                uint64_t *q_end = nullptr;
+                if (size_read_mod32) {
+                        q_end = q + size_read_bit32_1;
+                } else {
+                        q_end = q + size_read_bit32;
+                }
+
+                {
+                        uint32_t L = 0, R = 0;
+
+                        L = 0;
+                        R = N - 1;
+
+                        char *ptr = rb_reads.buffer + (size_read_char - 1);
+                        static char key = 0;
+                        static uint32_t a = 0;
+                        int lmd = size_read_char / period;
+
+                        cout << " " << L << " " << R << endl;
+                        for (int i = 0; i != 4; ++i) {
+                                C[i] += build_index.num_dollar;
+                        }
+                        /// Init
+                        key = *ptr;
+                        a = charToDna5[key];
+                        L = C[a];
+                        R = C[a] + Occ[a][R] - 1;
+                        cout << key << " " << L << " " << R << endl;
+
+                        for (int i = 1; i != lmd; ++i) {
+                                ptr -= period;
+                                key = *ptr;
+                                a = charToDna5[key];
+                                L = C[a] + Occ[a][L-1];
+                                R = C[a] + Occ[a][R] - 1;
+                                cout << key << " " << L << " " << R << endl;
+                        } cout << endl;
+                }
         }
 
 } /* namespace sbwt */

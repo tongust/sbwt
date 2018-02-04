@@ -52,6 +52,9 @@ BuildIndexRawData::BuildIndexRawData (char *seq_dna, size_t n, const uint32_t &p
         }
 
 	num_dollar = period - (length_ref % period);
+        if (length_ref % period) {
+                num_dollar += period;
+        }
 	length_ref += num_dollar;
         /// TODO Bad idea to use realloc()
         /// How to free memory created by realloc(), free() or delete[]?
@@ -572,23 +575,28 @@ void SortSbwtBlockwise(BuildIndexRawData &build_index)
 	char *seq = build_index.seq_raw;
         uint32_t *seq_index = build_index.suffix_array;
         const uint32_t &length_ref = build_index.length_ref;
-        const uint32_t &step = build_index.period;
         const uint32_t &num_block_sort = build_index.num_block_sort;
         uint32_t N = length_ref;
         const uint32_t &period = build_index.period;
 
         /// Firstly, split the sequence rotation matrix into 4^num_block blocks
-        SortSbwtBlockwise( seq, seq_index, 0, N, 0, length_ref, step, num_block_sort );
+        SortSbwtBlockwise( seq, seq_index, 0, N, 0, length_ref, period, num_block_sort );
 
         {
-                SortSbwt(seq, seq_index, 0, 1, num_block_sort, N, step);
+                /**
+                 * Splitting blocks:
+                 * The segments in range [beg0, end0) share with same
+                 * spaced prefix (length: num_block_sort * period).
+                 * Those blocks sharing with same prefix are sorted
+                 * again according to their suffixes.
+                 */
                 vector<char> tmpcv(num_block_sort, '\0');
                 uint32_t j = 0;
                 uint32_t t0 = 0;
-                bool flg = false;
+                bool flg;
                 uint32_t beg0 = 0, end0 = 1;
                 for (j = 0; j < num_block_sort; ++j) {
-                       tmpcv[j] = seq[(j*num_block_sort+seq_index[0])%N];
+                       tmpcv[j] = seq[(j*period+seq_index[0])%N];
                 }
                 for (uint32_t i = 1; i < N; ++i) {
                         flg = true;
@@ -602,10 +610,14 @@ void SortSbwtBlockwise(BuildIndexRawData &build_index)
                         if (!flg) {
                                 end0 = i;
                                 if (end0 > 1 + beg0) {
-                                        SortSbwt(seq, seq_index, beg0, end0, num_block_sort,N, step);
+                                        SortSbwt(seq, seq_index, beg0, end0, num_block_sort*period, N, period);
                                 }
                                 beg0 = i;
                         }
+                }
+                /// tail
+                if (N > 1 + beg0) {
+                        SortSbwt(seq, seq_index, beg0, N, num_block_sort*period, N, period);
                 }
         }
 }
