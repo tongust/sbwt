@@ -3,7 +3,7 @@ from sys import argv
 
 if __name__ == '__main__':
     if len(argv) != 2:
-        print "usage: [fa]"
+        print("usage: [fa]")
         exit()
 
     count_chr = 0

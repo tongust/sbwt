@@ -44,7 +44,7 @@ def generate_reads_kmer(file_name, kmer, size):
 
 				for i in xrange(0, size - kmer):
 					line, num = Mutation(ml[i:i+kmer])
-					print ">r"+str(i)+"-"+str(num)
+					print(">r"+str(i)+"-"+str(num))
 					print line
 
 
@@ -73,7 +73,7 @@ def CleanN_Fasta(file_name):
 
 def generate_reads_kmer_main():
     if len(argv) != 4:
-        print "usage: ", argv[0], " [.fa] [length (150)] [size 1024*1024] \n\r(Asumming there exits only one reads in .fa)"
+        print ("usage: " + argv[0] + " [.fa] [length (150)] [size 1024*1024] \n\r(Asumming there exits only one reads in .fa)")
         exit()
     kmer = int(argv[2])
     size = int(argv[3])

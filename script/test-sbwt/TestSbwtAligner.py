@@ -77,10 +77,10 @@ def gen_reads(period, ref, reads):
             else:
                 ml = ml.rstrip("\n")
                 size = len(ml)
-                for i in xrange(0, size - period*size_read):
+                for i in range(0, size - period*size_read):
                     line = ""
                     first = True
-                    for j in xrange(0, size_read):
+                    for j in range(0, size_read):
                         # with error
                         if random.randrange(0, 10) > 5 and first:
                             line += "A"
@@ -121,9 +121,9 @@ def spaced_exact_match(period, ref, reads, res):
 
             match_res = []
 
-            for i in xrange(0, end):
+            for i in range(0, end):
                 match = True
-                for j in xrange(0, len(p)):
+                for j in range(0, len(p)):
                     if p[j] != q[i+j*period]:
                         match = False
                         break
@@ -157,7 +157,7 @@ def verify_match(py_log, cpp_log):
 def test_exact_match():
     flog = open("test.exact.match.log", "w")
 
-    for t in xrange(0,1000):
+    for t in range(0,1000):
         os.system("rm -rf genome.fa* reads.fa *.log")
 
         num_ref = random.randrange(128*21, 100*1024)

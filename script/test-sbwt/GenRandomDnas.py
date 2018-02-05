@@ -5,7 +5,7 @@ from sys import argv
 
 def GenRandomDnas(size):
     if (size/4) < 1:
-        print "size is too small"
+        print("size is too small")
         return ""
     size = size / 4
     a = "A"*size + "C"*size + "G"*size + "T"*size
@@ -18,7 +18,7 @@ def GenRandomDnas(size):
 if __name__ == "__main__":
 
     if len(argv) != 2:
-        print "usage: <size>"
+        print("usage: <size>")
         exit(1)
 
     size = int(argv[1])
