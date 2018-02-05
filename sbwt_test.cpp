@@ -66,7 +66,7 @@ void TestSbwtExactMatch(int argc, char **argv)
         string reads_filename = string(argv[1]);
         string prefix_filename = string(argv[2]);
         BuildIndexRawData build_index(prefix_filename);
-        PrintFullSearchMatrix(build_index);
+        //PrintFullSearchMatrix(build_index);
 
         uint32_t period = build_index.period;
         uint32_t N = build_index.length_ref;
@@ -96,14 +96,14 @@ void TestSbwtExactMatch(int argc, char **argv)
                 char *ptr = rb_reads.buffer + (size_read_char - 1);
                 static char key = 0;
                 static uint32_t a = 0;
-                int lmd = size_read_char / period;
+                int lmd = size_read_char;
 
                 /// Init
                 key = *ptr;
                 a = charToDna5[key];
                 L = C[a];
                 R = C[a] + Occ[a][R] - 1;
-                cout << key << " " << L << " " << R << endl;
+                //cout << key << " " << L << " " << R << endl;
 
                 for (int i = 1; i != lmd; ++i) {
                         if (L > R) {
@@ -114,7 +114,7 @@ void TestSbwtExactMatch(int argc, char **argv)
                         a = charToDna5[key];
                         L = C[a] + Occ[a][L-1];
                         R = C[a] + Occ[a][R] - 1;
-                        cout << key << " " << L << " " << R << endl;
+                        //cout << key << " " << L << " " << R << endl;
                 }
 
                 if (L > R) {
@@ -128,7 +128,6 @@ void TestSbwtExactMatch(int argc, char **argv)
                                 }
                         } cout << endl;
                 }
-                break;
         }
 }
 } /* namespace sbwt_test */

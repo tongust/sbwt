@@ -67,7 +67,8 @@ def test_bitset():
 
 
 def gen_reads(period, ref, reads):
-    num_reads = 10
+    num_reads = 100
+    size_read = random.randrange(7, 128)
     fopen = open(reads, 'w')
     with open(ref) as mf:
         for ml in mf:
@@ -76,10 +77,10 @@ def gen_reads(period, ref, reads):
             else:
                 ml = ml.rstrip("\n")
                 size = len(ml)
-                for i in xrange(0, size - period*128):
+                for i in xrange(0, size - period*size_read):
                     line = ""
                     first = True
-                    for j in xrange(0, 128):
+                    for j in xrange(0, size_read):
                         # with error
                         if random.randrange(0, 10) > 5 and first:
                             line += "A"
@@ -91,6 +92,7 @@ def gen_reads(period, ref, reads):
 
                     num_reads -= 1
                     if num_reads < 0:
+                        pass
                         break
 
     fopen.close()
@@ -115,7 +117,7 @@ def spaced_exact_match(period, ref, reads, res):
                 continue
             else:
                 p = ml.rstrip('\n')
-            end = size - len(p)
+            end = size - len(p)*period
 
             match_res = []
 
@@ -129,16 +131,34 @@ def spaced_exact_match(period, ref, reads, res):
                     match_res.append(i)
             if len(match_res) == 0:
                 match_res.append(-1)
-            #fw.write(','.join(str(u) for u in match_res))
-            print(','.join(str(u) for u in match_res))
+            fw.write(','.join(str(u) for u in match_res) + "\n")
+    fw.close()
     return
+
+
+def verify_match(py_log, cpp_log):
+
+    res = True
+    with open(py_log) as p, open(cpp_log) as q:
+        for a, b in zip(p, q):
+            a = a.rstrip(os.linesep).split(",")
+            b = b.rstrip(os.linesep).split(",")
+            a = [int (i) for i in a]
+            b = [int (i) for i in b]
+            a.sort()
+            b.sort()
+
+            if a != b:
+                res = False
+                return res
+    return res
 
 
 def test_exact_match():
     flog = open("test.exact.match.log", "w")
 
-    for t in xrange(0,1):
-        os.system("rm -rf genome.fa*")
+    for t in xrange(0,1000):
+        os.system("rm -rf genome.fa* reads.fa *.log")
 
         num_ref = random.randrange(128*21, 100*1024)
         period = random.randrange(1, 20)
@@ -148,16 +168,20 @@ def test_exact_match():
         os.system("python ./GenRandomDnas.py " + str(num_ref) + " > genome.fa")
         os.system("./build_index " + str(period) + " " + ref)
         gen_reads(period, ref, reads)
-        #os.system("./sbwt_test reads.fa genome.fa > res.cpp.log")
+        os.system("./sbwt_test reads.fa genome.fa > res.cpp.log")
         spaced_exact_match(period, ref, reads, "res.py.log")
-        print("cpp-----------"+str(period))
-        os.system("./sbwt_test reads.fa genome.fa")
-
-    flog.close()
+        print("---------------------------- " + str(t))
+        if verify_match("res.py.log", "res.cpp.log"):
+            print("Successful")
+        else:
+            print("Failed!")
+            break
+        flog.close()
 
 
 if __name__ == '__main__':
     test_exact_match()
+    #spaced_exact_match(2, "genome.1024.fa", "read.fa", "aa.log")
 
 
 
