@@ -752,7 +752,7 @@ namespace sbwt
                 string reads_filename = string(argv[1]);
                 string prefix_filename = string(argv[2]);
                 BuildIndexRawData build_index(prefix_filename);
-                sbwt::PrintFullSearchMatrix(build_index);
+                //sbwt::PrintFullSearchMatrix(build_index);
 
                 uint32_t period = build_index.period;
                 uint32_t N = build_index.length_ref;
@@ -763,15 +763,24 @@ namespace sbwt
                 static uint8_t *ref_bin_ptr_array[4] = {nullptr};
                 ref_bin_ptr_array[0] = build_index.bin_8bit;
                 ref_bin_ptr_array[1] = build_index.bin_8bit + 1*build_index.size_bin_8bit;
-                ref_bin_ptr_array[1] = build_index.bin_8bit + 2*build_index.size_bin_8bit;
-                ref_bin_ptr_array[1] = build_index.bin_8bit + 3*build_index.size_bin_8bit;
+                ref_bin_ptr_array[2] = build_index.bin_8bit + 2*build_index.size_bin_8bit;
+                ref_bin_ptr_array[3] = build_index.bin_8bit + 3*build_index.size_bin_8bit;
 
                 /// reads
                 /// Read first segment.
                 reads_buffer rb_reads(reads_filename);
                 rb_reads.ReadNext();/// header
+                if (rb_reads.length_read < 1) {
+                        LOGDEBUG("Empty reads");
+                        return;
+                }
                 rb_reads.ReadNext();/// sequence
+                if (rb_reads.length_read < period) {
+                        LOGDEBUG("The length of single segment is less than the period");
+                        return;
+                }
 
+                // Assuming the length of single sequence segment is kept same.
                 uint32_t size_read_char = rb_reads.length_read;
                 uint32_t size_read_mod4 = size_read_char % 4;
                 uint32_t size_read_bit8 = (size_read_mod4) ? (size_read_char >> 2) + 1 : size_read_char >> 2;
@@ -795,37 +804,103 @@ namespace sbwt
                         q_end = q + size_read_bit32;
                 }
 
+                uint32_t L = 0, R = 0;
+                uint32_t N_1 = N - 1;
+
+                // Not sure the addr. of buffer will be changed.
+                // ---
+                // Alternatively, before calling getline(), *lineptr can contain a
+                // pointer to a malloc(3)-allocated buffer *n bytes in size.  If the
+                // buffer is not large enough to hold the line, getline() resizes it
+                // with realloc(3), updating *lineptr and *n as necessary.
+                // ---
+                // Reference: http://man7.org/linux/man-pages/man3/getline.3.html
+
+                static char key = 0;
+                static uint32_t a = 0;
+                uint32_t lmd = 0;
+                uint32_t *end_array = new uint32_t[period];
+                char *ptr = rb_reads.buffer + (size_read_char - 1);
+                char *ptr_reads = rb_reads.buffer;
+                char *ptr_reads_end = ptr_reads + size_read_char;
+                char *ptr_ref = build_index.seq_raw;
+                char **ptr_array = new char*[period];
+                uint32_t *begin_index = new uint32_t[period];
+                uint32_t index_tmp, index;
+
+                uint32_t *psa, *psa_end;
+
                 {
-                        uint32_t L = 0, R = 0;
+                        uint32_t tmp0 = size_read_char / period;
+                        uint32_t tmp1 = size_read_char % period;
 
-                        L = 0;
-                        R = N - 1;
-
-                        char *ptr = rb_reads.buffer + (size_read_char - 1);
-                        static char key = 0;
-                        static uint32_t a = 0;
-                        int lmd = size_read_char / period;
-
-                        cout << " " << L << " " << R << endl;
-                        for (int i = 0; i != 4; ++i) {
-                                C[i] += build_index.num_dollar;
+                        for (uint32_t i = 0; i != period; ++i) {
+                                end_array[i] = tmp0 + (i < tmp1);
+                                ptr_array[i] = ptr - i;
+                                begin_index[i] = size_read_char - ((end_array[i] - 1)*period + i + 1);
                         }
-                        /// Init
-                        key = *ptr;
-                        a = charToDna5[key];
-                        L = C[a];
-                        R = C[a] + Occ[a][R] - 1;
-                        cout << key << " " << L << " " << R << endl;
+                }
 
-                        for (int i = 1; i != lmd; ++i) {
+                for (uint32_t i = 0; i != period; ++i)
+                {
+                        lmd = end_array[i];
+                        ptr = ptr_array[i];
+
+                        // Init
+                        key = *ptr;
+                        a = charToDna5_32bit[key];
+                        L = C[a];
+                        R = C[a] + Occ[a][N_1] - 1;
+
+                        for (uint32_t j = 1; j != lmd; ++j) {
                                 ptr -= period;
                                 key = *ptr;
-                                a = charToDna5[key];
+                                a = charToDna5_32bit[key];
                                 L = C[a] + Occ[a][L-1];
                                 R = C[a] + Occ[a][R] - 1;
-                                cout << key << " " << L << " " << R << endl;
-                        } cout << endl;
-                }
+                                if (L > R) {
+                                        break;
+                                }
+                        }
+
+                        if (L > R) {
+                                continue;
+                        }
+
+                        psa = SA + L;
+                        psa_end = SA + R + 1;
+                        index_tmp = begin_index[i];
+                        bool flag_map = false;
+                        for (; psa != psa_end; ++psa) {
+                                index = *psa - index_tmp;
+
+                                // Brute force
+                                char *r_p = ptr_reads,
+                                     *r_q = ptr_ref + index;
+                                uint32_t count  = 0;
+                                flag_map = true;
+                                for (; r_p != ptr_reads_end;) {
+                                        if (*r_p++ != *r_q++) {
+                                                ++count;
+                                                if (count >= period) {
+                                                        flag_map = false;
+                                                        break;
+                                                }
+                                        }
+                                }
+                                if (flag_map) {
+                                        break;
+                                }
+                        }
+                        if (flag_map) {
+                                cout << "matched: " << index << endl;
+                                break;
+                        }
+                }/* i */
+
+                delete[] end_array;
+                delete[] ptr_array;
+                delete[] begin_index;
         }
 
 } /* namespace sbwt */

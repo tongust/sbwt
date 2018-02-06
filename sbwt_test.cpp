@@ -73,9 +73,6 @@ void TestSbwtExactMatch(int argc, char **argv)
         uint32_t *C = build_index.first_column;
         uint32_t **Occ = build_index.occurrence;
         uint32_t *SA = build_index.suffix_array;
-        for (int i = 0; i != 4; ++i) {
-                C[i] += build_index.num_dollar;
-        }
 
         /// reads
         /// Read first segment.

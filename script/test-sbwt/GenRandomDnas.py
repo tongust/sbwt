@@ -7,7 +7,7 @@ def GenRandomDnas(size):
     if (size/4) < 1:
         print("size is too small")
         return ""
-    size = size / 4
+    size = int(size / 4)
     a = "A"*size + "C"*size + "G"*size + "T"*size
     a = list(a)
     random.shuffle(a)

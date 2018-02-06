@@ -386,10 +386,11 @@ void CountOccurrence(BuildIndexRawData &build_index)
                         break;
                 }
         }
+        C[0] += build_index.num_dollar;
         C[3] = C[0] + C[1] + C[2];
         C[2] = C[0] + C[1];
         C[1] = C[0];
-        C[0] = 0;
+        C[0] = build_index.num_dollar;
 
 }
 

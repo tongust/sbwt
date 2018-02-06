@@ -138,7 +138,6 @@ def spaced_exact_match(period, ref, reads, res):
 
 def verify_match(py_log, cpp_log):
 
-    res = True
     with open(py_log) as p, open(cpp_log) as q:
         for a, b in zip(p, q):
             a = a.rstrip(os.linesep).split(",")
@@ -149,15 +148,20 @@ def verify_match(py_log, cpp_log):
             b.sort()
 
             if a != b:
-                res = False
-                return res
-    return res
+                if len(b) < len(a):
+                    return False
+                else:
+                    b = b[0:len(a):]
+                    if a != b:
+                        return False
+    return True
 
 
 def test_exact_match():
     flog = open("test.exact.match.log", "w")
 
-    for t in range(0,1000):
+    for t in range(0,10000):
+        print("---------------------------- " + str(t))
         os.system("rm -rf genome.fa* reads.fa *.log")
 
         num_ref = random.randrange(128*21, 100*1024)
@@ -168,9 +172,11 @@ def test_exact_match():
         os.system("python ./GenRandomDnas.py " + str(num_ref) + " > genome.fa")
         os.system("./build_index " + str(period) + " " + ref)
         gen_reads(period, ref, reads)
+        print("sbwt")
         os.system("./sbwt_test reads.fa genome.fa > res.cpp.log")
+        print("...")
         spaced_exact_match(period, ref, reads, "res.py.log")
-        print("---------------------------- " + str(t))
+        print("naive method")
         if verify_match("res.py.log", "res.cpp.log"):
             print("Successful")
         else:
@@ -181,37 +187,4 @@ def test_exact_match():
 
 if __name__ == '__main__':
     test_exact_match()
-    #spaced_exact_match(2, "genome.1024.fa", "read.fa", "aa.log")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
