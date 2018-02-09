@@ -1,4 +1,5 @@
 from sys import argv
+import os
 import random
 from GenRandomDnas import GenRandomDnas
 
@@ -11,7 +12,8 @@ def Mutation(reads):
     d = {'A':"CGT", 'C':"AGT", "G":"ACT", "T":"ACG"}
     idxs = range(0, len(reads))
     random.shuffle(idxs)
-    num = random.randrange(0, len(reads)+1)
+	# max 7 mismatches
+    num = random.randrange(0, 8)
     #num = random.randrange(1, 4)
     for i in xrange(0, num):
         i = idxs[i]
@@ -23,29 +25,25 @@ def Mutation(reads):
 def generate_reads_kmer(file_name, kmer, size):
     """
 	Assuming there exists only one read in fasta file.
-	"""
+    """
 
     size0 = size
-
     flag = False
+    ref = ""
     with open(file_name) as mf:
-		for ml in mf:
-			size = min(len(ml), size0+kmer)
-
-			if ml[0] == '>':
-				if flag:
-					break
-				flag = True
-				continue
-			else:
-				ml = ml[:-1:].replace("N", "")
-				if len(ml) < kmer or size < kmer:
-					exit()
-
-				for i in xrange(0, size - kmer):
-					line, num = Mutation(ml[i:i+kmer])
-					print(">r"+str(i)+"-"+str(num))
-					print line
+        for ml in mf:
+            if ml.startswith('>'):
+                if flag:
+                    break
+                flag = True
+                continue
+            ref = ref + ml.rstrip(os.linesep).replace("N", "A")
+    if len(ref) < kmer or size < kmer:
+        exit(1)
+    for i in xrange(0, size - kmer):
+        line, num = Mutation(ref[i:i+kmer])
+        print(">r"+str(i)+"-"+str(num)+"-"+str(i))
+        print(line)
 
 
 def CleanN_Fasta(file_name):

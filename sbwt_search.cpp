@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <cstdint>
 #include <iostream>
@@ -774,6 +775,11 @@ namespace sbwt
                         LOGDEBUG("Empty reads");
                         return;
                 }
+                char head_str[1024*1024] = {'\0'};
+                strcpy(head_str, rb_reads.buffer);
+                /// strip the new line char.
+                head_str[rb_reads.length_read] = '\0';
+
                 rb_reads.ReadNext();/// sequence
                 if (rb_reads.length_read < period) {
                         LOGDEBUG("The length of single segment is less than the period");
@@ -841,62 +847,266 @@ namespace sbwt
                         }
                 }
 
-                for (uint32_t i = 0; i != period; ++i)
-                {
-                        lmd = end_array[i];
-                        ptr = ptr_array[i];
+                uint32_t count  = 0;
+                char *align_p = nullptr;
+                char *align_q = nullptr;
 
-                        // Init
-                        key = *ptr;
-                        a = charToDna5_32bit[key];
-                        L = C[a];
-                        R = C[a] + Occ[a][N_1] - 1;
+/// break-version
+#if 0
+                bool flag_map = false;
+                for(;;) {
+                        flag_map = false;
 
-                        for (uint32_t j = 1; j != lmd; ++j) {
-                                ptr -= period;
+                        for (uint32_t i = 0; i != period; ++i)
+                        {
+                                lmd = end_array[i];
+                                ptr = ptr_array[i];
+
+                                // Init
                                 key = *ptr;
                                 a = charToDna5_32bit[key];
-                                L = C[a] + Occ[a][L-1];
-                                R = C[a] + Occ[a][R] - 1;
-                                if (L > R) {
-                                        break;
+                                L = C[a];
+                                R = C[a] + Occ[a][N_1] - 1;
+
+                                for (uint32_t j = 1; j != lmd; ++j) {
+                                        ptr -= period;
+                                        key = *ptr;
+                                        a = charToDna5_32bit[key];
+                                        L = C[a] + Occ[a][L-1];
+                                        R = C[a] + Occ[a][R] - 1;
+                                        if (L > R) {
+                                                break;
+                                        }
                                 }
-                        }
 
-                        if (L > R) {
-                                continue;
-                        }
+                                if (L > R) {
+                                        continue;
+                                }
 
-                        psa = SA + L;
-                        psa_end = SA + R + 1;
-                        index_tmp = begin_index[i];
-                        bool flag_map = false;
-                        for (; psa != psa_end; ++psa) {
-                                index = *psa - index_tmp;
+                                psa = SA + L;
+                                psa_end = SA + R + 1;
+                                index_tmp = begin_index[i];
 
-                                // Brute force
-                                char *r_p = ptr_reads,
-                                     *r_q = ptr_ref + index;
-                                uint32_t count  = 0;
-                                flag_map = true;
-                                for (; r_p != ptr_reads_end;) {
-                                        if (*r_p++ != *r_q++) {
-                                                ++count;
-                                                if (count >= period) {
-                                                        flag_map = false;
-                                                        break;
+                                for (; psa != psa_end; ++psa) {
+                                        index = *psa - index_tmp;
+                                        count  = 0;
+
+                                        // Brute force
+                                        align_p = ptr_reads;
+                                        align_q = ptr_ref + index;
+                                        flag_map = true;
+
+                                        for (; align_p != ptr_reads_end;) {
+                                                if (*align_p++ != *align_q++) {
+                                                        if (++count == period) {
+                                                                flag_map = false;
+                                                                break;
+                                                        }
                                                 }
+                                        }
+                                        if (flag_map) {
+                                                break;
                                         }
                                 }
                                 if (flag_map) {
+                                        //cout << "matched: " << index << "\n";
                                         break;
                                 }
-                        }
+                        }/* i */
+
                         if (flag_map) {
-                                cout << "matched: " << index << endl;
+                                cout << "matched\t" << index << "\n";
+                        } else {
+                                cout << "*\n";
+                        }
+
+                        rb_reads.ReadNext();/// header
+                        if (rb_reads.length_read < 1) {
+                                LOGEINFO("Empty reads");
                                 break;
                         }
-                }/* i */
+                        rb_reads.ReadNext();/// sequence
+
+                } /* Readings */
+#endif /* break-version */
+
+/// goto-version
+#if 1
+                char *p_end_rc = nullptr;
+                char *p_rc = nullptr;
+                char *p0_rc = nullptr;
+                char tmp_rc;
+                char flag_minus_plus = '+';
+                {
+                        uint32_t i;
+                        flag_minus_plus = '+';
+
+                        for(;;) {
+                                i = 0;
+                                for (;;)
+                                {
+                                        lmd = end_array[i];
+                                        ptr = ptr_array[i];
+
+                                        /// Init
+                                        key = *ptr;
+                                        a = charToDna5_32bit[key];
+                                        L = C[a];
+                                        R = C[a] + Occ[a][N_1] - 1;
+
+                                        for (uint32_t j = 1; j != lmd; ++j) {
+                                                ptr -= period;
+                                                key = *ptr;
+                                                a = charToDna5_32bit[key];
+                                                L = C[a] + Occ[a][L-1];
+                                                R = C[a] + Occ[a][R] - 1;
+                                                if (L > R) {
+                                                        goto loop_verification;
+                                                }
+                                        }
+
+                                        psa = SA + L;
+                                        psa_end = SA + R + 1;
+                                        index_tmp = begin_index[i];
+
+                                        for (;;) {
+                                                psa_loop:
+                                                if (psa == psa_end) {
+                                                        goto loop_verification;
+                                                }
+
+                                                index = *psa - index_tmp;
+                                                count  = 0;
+
+                                                // Brute force
+                                                align_p = ptr_reads;
+                                                align_q = ptr_ref + index;
+
+                                                for (; align_p != ptr_reads_end;) {
+                                                        if (*align_p++ != *align_q++) {
+                                                                if (++count == period) {
+                                                                        ++psa;// Careful about its position.
+                                                                        goto psa_loop;
+                                                                }
+                                                        }
+                                                } // align p and q
+
+                                                goto match_success;
+
+                                        } // psa
+
+                                        /// loop verification
+                                        loop_verification:
+                                        if (++i == period) {
+                                                /// Still not matched.
+                                                goto match_failure;
+                                        }
+                                }/* i */
+
+                                /// failed in forward searching
+                                match_failure:
+                                /// Reverse Complement
+                                p0_rc = rb_reads.buffer;
+                                p_end_rc = p0_rc + ( (size_read_char+1) >> 1 );
+                                p_rc = p0_rc + (size_read_char - 1);
+                                for (; p0_rc != p_end_rc; ) {
+                                        tmp_rc = sbwtio::DnaCharMapReverseComplement[*p0_rc];
+                                        *p0_rc++ = sbwtio::DnaCharMapReverseComplement[*p_rc];
+                                        *p_rc-- = tmp_rc;
+                                }
+
+                                flag_minus_plus = '-';
+                                i = 0;
+                                for (;;)
+                                {
+                                        lmd = end_array[i];
+                                        ptr = ptr_array[i];
+
+                                        // Init
+                                        key = *ptr;
+                                        a = charToDna5_32bit[key];
+                                        L = C[a];
+                                        R = C[a] + Occ[a][N_1] - 1;
+
+                                        for (uint32_t j = 1; j != lmd; ++j) {
+                                                ptr -= period;
+                                                key = *ptr;
+                                                a = charToDna5_32bit[key];
+                                                L = C[a] + Occ[a][L-1];
+                                                R = C[a] + Occ[a][R] - 1;
+                                                if (L > R) {
+                                                        goto loop_verification_rc;
+                                                }
+                                        }
+
+                                        psa = SA + L;
+                                        psa_end = SA + R + 1;
+                                        index_tmp = begin_index[i];
+
+                                        for (;;) {
+                                                psa_loop_rc:
+                                                if (psa == psa_end) {
+                                                        goto loop_verification_rc;
+                                                }
+
+                                                index = *psa - index_tmp;
+                                                count  = 0;
+
+                                                // Brute force
+                                                align_p = ptr_reads;
+                                                align_q = ptr_ref + index;
+
+                                                for (; align_p != ptr_reads_end;) {
+                                                        if (*align_p++ != *align_q++) {
+                                                                if (++count == period) {
+                                                                        ++psa;// Careful about its position.
+                                                                        goto psa_loop_rc;
+                                                                }
+                                                        }
+                                                } // align p and q
+
+                                                goto match_success;
+
+                                        } // psa
+
+                                        /// loop verification
+                                        loop_verification_rc:
+                                        if (++i == period) {
+                                                /// Still not matched.
+                                                goto match_failure_rc;
+                                        }
+                                }/* i */
+
+                                match_failure_rc:
+                                rb_reads.ReadNext();/// header
+                                if (rb_reads.length_read < 1) {
+                                        LOGERROR("Empty reads");
+                                        break;
+                                }
+                                strcpy(head_str, rb_reads.buffer);
+                                /// strip the new line char.
+                                head_str[rb_reads.length_read] = '\0';
+
+                                rb_reads.ReadNext();/// sequence
+                                continue;
+
+                                match_success:
+                                cout << head_str << "\t"
+                                     << flag_minus_plus << "\tchr1\t"
+                                     << index << "\t" << rb_reads.buffer;
+                                rb_reads.ReadNext();/// header
+                                if (rb_reads.length_read < 1) {
+                                        LOGERROR("Empty reads");
+                                        break;
+                                }
+                                strcpy(head_str, rb_reads.buffer);
+                                /// strip the new line char.
+                                head_str[rb_reads.length_read] = '\0';
+
+                                rb_reads.ReadNext();/// sequence
+                        } /* Readings */
+                }
+#endif/* goto-version */
 
                 delete[] end_array;
                 delete[] ptr_array;

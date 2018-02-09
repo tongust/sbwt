@@ -27,6 +27,8 @@ extern uint8_t rcCharToDna5[256];
  * */
 extern const uint8_t Array256Swap2bitTable[256];
 
+///
+extern const char DnaCharMapReverseComplement[256];
 /* Using builtin popcount by default */
 #ifndef BUILTIN_POPCOUNT
 #define BUILTIN_POPCOUNT
