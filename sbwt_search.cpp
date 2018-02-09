@@ -939,9 +939,9 @@ namespace sbwt
                 char flag_minus_plus = '+';
                 {
                         uint32_t i;
-                        flag_minus_plus = '+';
 
                         for(;;) {
+                                flag_minus_plus = '+';
                                 i = 0;
                                 for (;;)
                                 {
