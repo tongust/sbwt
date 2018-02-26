@@ -7,6 +7,7 @@
 
 namespace logger {
 using std::cout;
+using std::cerr;
 using std::cin;
 using std::endl;
 using std::string;
@@ -16,6 +17,12 @@ void LogDebug(const string &msg) {
 	cout << "[Debug]\t"
 		<< std::asctime(std::localtime(&result))
 		<< msg << endl;
-	return;
+}
+void LogError(const string &msg) {
+        time_t result = std::time(nullptr);
+	cerr << "[Error]\t"
+                << __FILE__ << " " << __LINE__ << " "
+                << std::asctime(std::localtime(&result))
+                << msg << endl;
 }
 } /* logger */
