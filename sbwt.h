@@ -27,6 +27,8 @@ using std::string;
 
 struct BuildIndexRawData{
 	BuildIndexRawData();
+	/// Build index block-wise (with read reference function)
+        BuildIndexRawData(char *, const uint32_t &/*period*/, const uint32_t&/*# of blocks*/);
         /// Build index block-wise
 	BuildIndexRawData(char*, size_t, const uint32_t &, const uint32_t&);
         /// Build index from index files

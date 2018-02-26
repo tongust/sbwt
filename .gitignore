@@ -30,3 +30,6 @@ Makefile
 
 # log files
 *.log
+
+# other files
+*~

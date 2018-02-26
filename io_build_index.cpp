@@ -19,6 +19,7 @@
 #include "word_io.h"
 #include "sequence_pack.h"
 #include "sbwt.h"
+#include "log.h"
 
 using namespace seqan;
 using namespace std;
@@ -41,9 +42,11 @@ void WriteIntoDiskBuildIndex(sbwt::BuildIndexRawData &build_index, const string 
         size_packed_seq_8bit += build_index.length_ref % 4 == 0 ? 0 : 1;
         ///uint64_t size_packed_seq = build_index.length_ref / 32;
 
+
         /**
          * Meta information
          */
+        LOGINFO("Write meta information...\n");
         bool is_bigendian = currentlyBigEndian();
         writeU32(meta_fout, (uint32_t)is_bigendian, is_bigendian);      /* The endian flag */
         writeU32(meta_fout, build_index.length_ref, is_bigendian);      /* Length of reference sequence including $s*/
@@ -76,6 +79,7 @@ void WriteIntoDiskBuildIndex(sbwt::BuildIndexRawData &build_index, const string 
         /// 8-bit version
         {
                 /// Watch out for the boarder
+                LOGINFO("Packed binary sequence...\n");
                 std::shared_ptr<uint8_t > binary_8bit_sptr(new uint8_t[(size_packed_seq_8bit * 4) + 1024]);
 
                 for (int i = 0; i != 4; ++i) {
@@ -90,11 +94,13 @@ void WriteIntoDiskBuildIndex(sbwt::BuildIndexRawData &build_index, const string 
 
         /// The raw sequence
         /// TODO map directly the memory to files
+        LOGINFO("Write raw sequence...\n");
         array_fout.write(build_index.seq_raw, build_index.length_ref);
 
         //array_fout.write(build_index.seq_transformed, build_index.length_ref);
 
         /// Occurrence
+        LOGINFO("Write raw occurrence...\n");
         for (int i = 0; i != 4; ++i) {
                 uint32_t *beg = build_index.occurrence[i];
                 uint32_t *end = beg+build_index.length_ref;
@@ -105,6 +111,7 @@ void WriteIntoDiskBuildIndex(sbwt::BuildIndexRawData &build_index, const string 
         }
 
         /// suffix array
+        LOGINFO("Write raw suffix array...\n");
         uint32_t *beg = build_index.suffix_array;
         uint32_t *end = build_index.suffix_array + build_index.length_ref;
         while (beg != end) {

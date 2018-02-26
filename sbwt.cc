@@ -18,9 +18,11 @@
 #include "ref_read.h"
 #include "word_io.h"
 #include "sequence_pack.h"
+#include "utility.h"
 
 namespace sbwt {
 using std::vector;
+using namespace utility;
 
 BuildIndexRawData::BuildIndexRawData():
 	seq_raw(nullptr),
@@ -36,6 +38,111 @@ BuildIndexRawData::BuildIndexRawData():
 		first_column[i] = 0;
 	}
 }
+
+
+BuildIndexRawData::BuildIndexRawData(char *file_name, const uint32_t &per, const uint32_t &nb):
+        seq_raw(nullptr),
+        bin_8bit(nullptr),
+        size_bin_8bit(0)
+{
+        period = per;
+        num_block_sort = nb;
+
+        uint32_t read_length = 0;
+
+        /// Read raw sequence file in fasta format
+        char *buffer = nullptr;
+        {
+                uint32_t string_length;
+		FILE *handler = fopen(file_name, "r");
+
+		if (!handler) {
+                        logger::LogError("failure to open");
+		}
+                fseek(handler, 0, SEEK_END);    /* Seek the last byte */
+                string_length = ftell(handler); /* Calculate the offset from head to tail */
+                rewind(handler);                /* Back to the head */
+
+                //buffer = (char *) malloc(sizeof(char) * (string_length + 1));
+                buffer = new char[sizeof(char) * (string_length + 1)];
+                read_length = fread(buffer, sizeof(char), string_length, handler);
+
+                buffer[string_length] = '\0';
+
+                if (read_length != string_length) {
+                        delete []buffer;
+                        logger::LogDebug("Errors in fread");
+                        return;
+                }
+        }
+
+        /// Extract pure DNA nucleotides (A/C/G/T)
+        {
+                uint32_t total_num = 0;
+                char *ptr = buffer;
+                for (uint32_t i = 0; i < read_length; ++i) {
+                        if (IsDNA(*ptr)) {
+                                ++total_num;
+                        }
+                        ++ptr;
+                }
+
+                /// enough memory for $s and "boarder case"
+                /// And the period must be less than 1024
+                /// In case the boarder of sequence array will be reached.
+                uint32_t n_alloc = ((total_num/1024)+4)*1024;
+                seq_raw = new char[n_alloc]();
+                //for (uint32_t i = 0; i != n_alloc; ++i) { seq_raw[i] = 0; }
+
+                char *ptr0 = seq_raw;
+                ptr = buffer;
+                for (uint32_t i = 0; i < read_length; ++i) {
+                        if (IsDNA(*ptr)) {
+                                *ptr0 = *ptr;
+                                ++ptr0;
+                        }
+                        ++ptr;
+                }
+
+                length_ref = total_num;
+        }
+
+        /// Init
+        {
+                if (period > 1024) {
+                        period = 1024;
+                        logger::LogError("The period must be less than 1024.");
+                }
+
+		num_dollar = period - (length_ref % period);
+                if (length_ref % period) {
+                        num_dollar += period;
+                }
+		length_ref += num_dollar;
+
+		for (uint32_t i = 0; i < num_dollar; ++i) {
+			seq_raw[length_ref-i-1] = '$';
+		}
+
+		for (int i = 0; i < 4; ++i) { first_column[i] = 0; }
+
+		occurrence = new uint32_t*[4];
+		for (int i = 0; i != 4; ++i)
+		{
+			occurrence[i] = new uint32_t[length_ref]();
+			occurrence[i][0] = 0;
+		}
+
+		seq_transformed = new char[length_ref];
+
+		suffix_array = new uint32_t[length_ref];
+		/* initialize suffix_array with 0,1,...,N-1 */
+		for (size_t i = 0; i != length_ref; ++i) suffix_array[i] = i;
+        }
+
+        delete[] buffer;
+}
+
 
 BuildIndexRawData::BuildIndexRawData (char *seq_dna, size_t n, const uint32_t &per = 2, const uint32_t &nb = 4):
 	seq_raw(seq_dna),
@@ -197,7 +304,7 @@ BuildIndexRawData::~BuildIndexRawData()
 /* Swap within array seq_index*/
 void VectorSwap(uint32_t i, uint32_t j, uint32_t n, uint32_t* seq_index)
 {
-        static uint32_t tmpval = 0;
+        uint32_t tmpval = 0;
         while (n-- > 0) {
                 /* swap */
                 tmpval = seq_index[i];
@@ -222,10 +329,34 @@ void SortSbwt(
 	/* Condition of end */
 	if (begin+1 >= end || depth >= length_ref) return;
 
+        if (end - begin == 2) {
+                bool smaller = true;
+                uint32_t i1 = seq_index[begin],
+                         i2 = seq_index[begin+1];
+                for (uint32_t i = depth; i < length_ref; i+=step) {
+                        char c1 = i1+i >= length_ref ? '$' : seq[i1+i];
+                        char c2 = i2+i >= length_ref ? '$' : seq[i2+i];
+                        if (c1 == '$' || c2 == '$') {
+                                if (c1 != '$') {
+                                        smaller = false;
+                                }
+                                break;
+                        } else if (c1 != c2) {
+                                smaller = c1 < c2;
+                                break;
+                        }
+                }
+                if (!smaller) {
+                        seq_index[begin] = i2;
+                        seq_index[begin+1] = i1;
+                }
+                return;
+        }
+
 	int64_t a = 0, b = 0, c = 0,
 		d = 0, r = 0, v = 0,
 		distance = 0;
-	uint32_t tmpval = 0, tmpval1 = 0;
+	uint64_t tmpval = 0, tmpval1 = 0;
 	distance = end - begin;
 	a = (rand() % distance) + begin;
 
@@ -240,7 +371,61 @@ void SortSbwt(
 	a = b = begin + 1;
 	c = d = end - 1;
 
+        uint64_t size_ref64 = length_ref;
+
 	for (;;) {
+#if 1
+                while (true) {
+                        if (b <= c)  {
+                                tmpval1 = seq_index[b];
+                                tmpval1 += depth;
+                                r = (tmpval1 >= size_ref64) ? '$' : seq[tmpval1];
+                                r -= v;
+                                if (r > 0) {
+                                        break;
+                                }
+                        } else {
+                                break;
+                        }
+
+			if (r == 0) {
+				/* swap a with b */
+				tmpval = seq_index[a];
+				seq_index[a] = seq_index[b];
+				seq_index[b] = tmpval;
+
+				++a;
+			}
+			++b;
+		}
+
+                while(true) {
+                        if (b <= c) {
+                                tmpval1 = seq_index[c];
+                                tmpval1 += depth;
+                                r = (tmpval1 >= size_ref64) ? '$' : seq[tmpval1];
+                                r -= v;
+                                if (r < 0) {
+                                        break;
+                                }
+                        } else {
+                                break;
+                        }
+
+			if (r == 0) {
+				/* swap c with d */
+				tmpval = seq_index[c];
+				seq_index[c] = seq_index[d];
+				seq_index[d] = tmpval;
+
+				--d;
+			}
+			--c;
+		}
+		if (b > c) break;
+#endif
+
+#if 0
 		while ( b <= c &&
 			(tmpval1 = seq_index[b]+depth, r = (tmpval1 >= length_ref ? '$' : seq[tmpval1]) - v) <= 0
 			) {
@@ -270,7 +455,7 @@ void SortSbwt(
 			--c;
 		}
 		if (b > c) break;
-
+#endif
 		/* swap b and c */
 		tmpval = seq_index[b];
 		seq_index[b] = seq_index[c];
@@ -403,11 +588,17 @@ void BuildIndex(BuildIndexRawData &build_index) {
 }
 
 void BuildIndexBlockwise(BuildIndexRawData &build_index) {
-         if (build_index.suffix_array && build_index.seq_raw) {
-                 SortSbwtBlockwise(build_index);
-                 Transform(build_index);
-                 CountOccurrence(build_index);
-         }
+        if (build_index.suffix_array && build_index.seq_raw) {
+                LOGINFO("Sort sbwt block-wise...\n")
+                SortSbwtBlockwise(build_index);
+                LOGINFO("SortSbwtBlockwise done\n");
+                LOGINFO("Transform...\t");
+                Transform(build_index);
+                LOGPUT("Done\n");
+                LOGINFO("CountOccurrence...\t");
+                CountOccurrence(build_index);
+                LOGPUT("Done\n");
+        }
 }
 
 void PrintFullSearchMatrix(BuildIndexRawData &build_index)
@@ -581,7 +772,13 @@ void SortSbwtBlockwise(BuildIndexRawData &build_index)
         const uint32_t &period = build_index.period;
 
         /// Firstly, split the sequence rotation matrix into 4^num_block blocks
-        SortSbwtBlockwise( seq, seq_index, 0, N, 0, length_ref, period, num_block_sort );
+        LOGINFO("Firstly, split the sequence rotation matrix into 4^"<< num_block_sort << " blocks\n");
+        try {
+                SortSbwtBlockwise( seq, seq_index, 0, N, 0, length_ref, period, num_block_sort );
+        } catch (...) {
+                LOGERROR("SortSbwtBlockwise");
+                throw;
+        }
 
         {
                 /**
@@ -591,6 +788,7 @@ void SortSbwtBlockwise(BuildIndexRawData &build_index)
                  * Those blocks sharing with same prefix are sorted
                  * again according to their suffixes.
                  */
+                LOGINFO("Splitting blocks...\n");
                 vector<char> tmpcv(num_block_sort, '\0');
                 uint32_t j = 0;
                 uint32_t t0 = 0;
@@ -611,15 +809,31 @@ void SortSbwtBlockwise(BuildIndexRawData &build_index)
                         if (!flg) {
                                 end0 = i;
                                 if (end0 > 1 + beg0) {
-                                        SortSbwt(seq, seq_index, beg0, end0, num_block_sort*period, N, period);
+                                        try {
+                                                LOGINFO("Sort block in [" << beg0 << ",\t" << end0 << ")...\t");
+                                                SortSbwt(seq, seq_index, beg0, end0, num_block_sort*period, N, period);
+                                                LOGPUT("Done\n");
+                                        } catch (...) {
+                                                LOGERROR("[" << beg0 << ",\t" << end0 << ")\n");
+                                                throw;
+                                        }
+
                                 }
                                 beg0 = i;
                         }
                 }
                 /// tail
+                LOGINFO("Tail case...\t");
                 if (N > 1 + beg0) {
-                        SortSbwt(seq, seq_index, beg0, N, num_block_sort*period, N, period);
+                        try {
+                                SortSbwt(seq, seq_index, beg0, N, num_block_sort*period, N, period);
+                        } catch (...) {
+                                LOGERROR("SortSbwt");
+                                throw;
+                        }
+
                 }
+                LOGPUT("Done\n");
         }
 }
 
