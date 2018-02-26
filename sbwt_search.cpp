@@ -1152,7 +1152,7 @@ namespace sbwt
                 reads_buffer rb_reads(reads_filename);
                 rb_reads.ReadNext();/// header
                 if (rb_reads.length_read < 1) {
-                        LOGERROR("Empty reads");
+                        LOGINFO("Empty reads\n");
                         return;
                 }
                 char head_str[1024*1024] = {'\0'};
@@ -1448,8 +1448,7 @@ namespace sbwt
                         ++total_reads;
                         rb_reads.ReadNext();/// header
                         if (rb_reads.length_read < 1) {
-                                //LOGERROR("Empty reads");
-                                LOGINFO("Search Done\n");
+                                LOGINFO("Search done\n");
                                 break;
                         }
                         strcpy(head_str, rb_reads.buffer);
@@ -1467,7 +1466,7 @@ namespace sbwt
                              << index << "\t" << rb_reads.buffer;
                         rb_reads.ReadNext();/// header
                         if (rb_reads.length_read < 1) {
-                                LOGERROR("Empty reads");
+                                LOGINFO("Search done\n");
                                 break;
                         }
                         strcpy(head_str, rb_reads.buffer);
