@@ -121,5 +121,6 @@ extern uint8_t dna4Cat[];
 extern uint8_t charToDna5[];
 extern uint8_t rcCharToDna5[];
 extern uint32_t charToDna5_32bit[];
+extern uint32_t rcCharToDna5_32bit[];
 
 #endif /*ALPHABETS_H_*/

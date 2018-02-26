@@ -19,7 +19,8 @@ int main(int argc, char **argv)
                 return 1;
         }
 
-        sbwt::Search(argv);
+        //sbwt::UnsortedUnpackedSearch(argv);
+        sbwt::UnsortedPackedSearch(argv);
 
         return 0;
 }

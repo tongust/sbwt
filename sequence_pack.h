@@ -99,7 +99,7 @@ extern const char DnaCharMapReverseComplement[256];
         void BaseChar2Binary64B_RC(uint64_t* binary_seq, uint64_t size_seq, uint64_t *binary_seq_rc);
 
         /// Version 1: Streamed from BaseChar2Binary8B (as benchmark)
-        void BaseChar2Binary8B_RC(uint8_t *bin, uint32_t size, uint8_t *bin_rc);
+        void BaseChar2Binary8B_RC(uint8_t *bin/*src*/, uint32_t size, uint8_t *bin_rc/*sink*/);
 
         /// Version 2: reverse the dnas and then use BaseChar2Binary8B
         void BaseChar2Binary8B_RC(char *buffer, uint32_t size, uint8_t *bin);

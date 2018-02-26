@@ -80,7 +80,8 @@ namespace sbwt
         };
 
 
-        void Search(char **);
+        void UnsortedUnpackedSearch(char **);
+        void UnsortedPackedSearch(char **);
 } /* namespace sbwt */
 
 #endif /* SBWT_SEARCH_H */
