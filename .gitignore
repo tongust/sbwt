@@ -3,6 +3,8 @@ sbwt
 build_index
 count_occ
 sbwt_test
+sbwt-debug
+build_index-debug
 *.o
 *.a
 *.so

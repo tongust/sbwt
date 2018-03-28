@@ -51,3 +51,10 @@ add_executable(count_occ ${CMAKE_SOURCE_DIR}/count_occ.cc ${SRC_C} ${SRC_CC} ${S
 add_executable(sbwt ${CMAKE_SOURCE_DIR}/sbwt_aligner.cpp ${SRC_C} ${SRC_CC} ${SRC_CPP})
 
 add_executable(sbwt_test ${CMAKE_SOURCE_DIR}/sbwt_test.cpp ${SRC_C} ${SRC_CC} ${SRC_CPP})
+
+# Debug
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -std=c++11 -Wunused-local-typedefs -fpermissive -O0 -g") # complier flag (Not optimal at all)
+
+add_executable(build_index-debug ${CMAKE_SOURCE_DIR}/build_index.cc ${SRC_C} ${SRC_CC} ${SRC_CPP})
+
+add_executable(sbwt-debug ${CMAKE_SOURCE_DIR}/sbwt_aligner.cpp ${SRC_C} ${SRC_CC} ${SRC_CPP})
