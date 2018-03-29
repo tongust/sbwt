@@ -1,4 +1,5 @@
 import os
+import sys
 import random
 
 
@@ -157,33 +158,65 @@ def verify_match(py_log, cpp_log):
     return True
 
 
+def verify_sbwt_from_log(res_log, reads, period):
+
+    # check position
+    check1 = True
+    log_set = set()
+
+    with open(res_log) as mf:
+        for ml in mf:
+            if len(ml) > 0:
+                ml.rstrip(os.linesep)
+                ml = ml.split("\t")
+                posl = ml[0].split("-")[-1]
+                posr = ml[3]
+                log_set.add(ml[0].split("-")[0])
+                if posl != posr:
+                    print "Failure in phase 1!"
+                    check1 = False
+
+    check2 = True
+
+    with open(reads) as mf:
+        for ml in mf:
+            if ml.startswith(">"):
+                ml.rstrip(os.linesep)
+                a = ml[1::].split('-')[0]
+                b = int(ml.split('-')[1])
+                if b < period:
+                    if a not in log_set:
+                        check2 = False
+                        print period,a
+                        print "Failure in phase 2!"
+
+    return check1 and check2
+
 def test_exact_match():
-    flog = open("test.exact.match.log", "w")
 
-    for t in range(0,10000):
+    for t in range(0,100):
         print("---------------------------- " + str(t))
-        os.system("rm -rf genome.fa* reads.fa *.log")
+        os.system("rm -rf genome-test.fa* reads-test.fa *.log")
+        num_ref = 150000
+        size_read = (num_ref / 150) - 10;
+        period = random.randrange(2, 10)
+        reads = "reads-test.fa"
+        ref = "genome-test.fa"
 
-        num_ref = random.randrange(128*21, 100*1024)
-        period = random.randrange(1, 20)
-        reads = "reads.fa"
-        ref = "genome.fa"
+        os.system("python ./GenRandomDnas.py " + str(num_ref) + " > genome-test.fa")
+        print("Generating faked reads fasta...")
+        os.system("python ./GenReferenceAndReads.py genome-test.fa 150 " + str(size_read) + " > reads-test.fa")
 
-        os.system("python ./GenRandomDnas.py " + str(num_ref) + " > genome.fa")
-        os.system("./build_index " + str(period) + " " + ref)
-        gen_reads(period, ref, reads)
-        print("sbwt")
-        os.system("./sbwt_test reads.fa genome.fa > res.cpp.log")
-        print("...")
-        spaced_exact_match(period, ref, reads, "res.py.log")
-        print("naive method")
-        if verify_match("res.py.log", "res.cpp.log"):
-            print("Successful")
-        else:
-            print("Failed!")
+        os.system("./build_index " + str(period) + " " + ref + " > /dev/null 2>&1")
+
+        os.system("./sbwt reads-test.fa genome-test.fa > res.sbwt.log")
+
+        if  not verify_sbwt_from_log("res.sbwt.log", "reads-test.fa", period):
+            print "ERROR"
             break
-        flog.close()
 
+
+    print "================================================="
 
 if __name__ == '__main__':
     test_exact_match()
