@@ -9,6 +9,16 @@
 
 
 /**
+ * Write a 16-bit unsigned to an output stream being careful to
+ * re-endianize if caller-requested endianness differs from current
+ * host.
+ */
+static inline void writeU16(std::ostream& out, uint16_t x) {
+	out.write((const char*)&x, 2);
+}
+
+
+/**
  * Write a 32-bit unsigned to an output stream being careful to
  * re-endianize if caller-requested endianness differs from current
  * host.

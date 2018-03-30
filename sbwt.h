@@ -49,10 +49,39 @@ struct BuildIndexRawData{
         uint32_t size_bin_8bit;         /* Length of packed binary sequence */
 };
 
+
+class SecondIndex{
+public:
+	SecondIndex();
+
+        /// array consists of header and sequence
+	///     1. header: the position in reference;
+        ///     2. size of single segment;
+	///     3. sequence: sorted index (position in SSA).
+	uint16_t *array_ptr;
+	/// size of array_ptr
+	uint64_t size;
+        /// min size of array to sort
+        static uint32_t size_min;
+        ///
+        uint32_t size_seed;
+
+	~SecondIndex();
+
+public:
+        void RebuildIndexInit(BuildIndexRawData&, uint32_t);
+        void RebuildIndex(BuildIndexRawData&);
+	void PrintSecondIndex(BuildIndexRawData&);
+};
+
+
 void SortSbwt(char*, uint32_t*, uint32_t, uint32_t, uint32_t, const uint32_t&, const uint32_t&);
+void SortSbwt(char*, uint32_t*, uint32_t, uint32_t, uint32_t, const uint32_t&, const uint32_t&, const uint32_t&/*limited length*/);
 inline void VectorSwap(uint32_t, uint32_t, uint32_t, uint32_t*);
 void BuildIndex(BuildIndexRawData&);
 void BuildIndexBlockwise(BuildIndexRawData&);
+void BuildSortedIndexBlockwise(BuildIndexRawData&);
+void BuildSortedIndexTransCountOcc(BuildIndexRawData&);
 void CountOccurrence(BuildIndexRawData&);
 void PrintFullSearchMatrix(BuildIndexRawData&);
 void PrintFullSearchMatrix(uint32_t *SA, char *X, uint32_t N, uint32_t period);

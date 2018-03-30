@@ -53,6 +53,46 @@ int main(int argc, char **argv)
         sbwt::BuildIndexRawData build_index(file_name, period, num_block_sort);
         LOGINFO("Total length: " << build_index.length_ref << "\n");
 #endif
+
+#define SECOND_INDEX
+
+#ifdef SECOND_INDEX
+        LOGINFO("Building index...\n");
+        sbwt::BuildSortedIndexBlockwise(build_index);
+
+        /*
+         * Prerequisite in sorted index:
+         *     The length of reads must be less than length of seed by period.
+         *     For example, if processing Illumina's reads (150 bp),
+         *     it is recommended that pair of period and seed: 2 with 75, 3 with 50,
+         *     5 with 30, 6 with 25.
+         * Proof:
+         *     Because of resorting, the suffix array range in same-sampled-prefix matrix
+         *     is disordered. And the Occ and C will be changed and the spaced suffix array
+         *     ranging search equation will not hold. If the length of reads is larger than
+         *     period by length of seed, the left and right range of reads may be covered.
+         * Mine Field:
+         *     The range of sorted index.
+         */
+        sbwt::SecondIndex secondIndex;
+        /// Init SecondIndex
+        secondIndex.RebuildIndexInit(build_index, 10);
+        /// Sorting
+        secondIndex.RebuildIndex(build_index);
+
+        /// must add transform and count occurrence
+        sbwt::BuildSortedIndexTransCountOcc(build_index);
+
+#if DEBUG_SECONDINDEX
+        sbwt::PrintFullSearchMatrix(build_index);
+#endif
+        /// write into disk
+        LOGINFO("Write into disk...\n");
+        sbwt::WriteIntoDiskBuildIndex(build_index, string(file_name));
+        LOGINFO("Build index done\n");
+
+
+#else
         LOGINFO("Building index...\n");
         sbwt::BuildIndexBlockwise(build_index);
 
@@ -62,6 +102,8 @@ int main(int argc, char **argv)
         LOGINFO("Write into disk...\n");
         sbwt::WriteIntoDiskBuildIndex(build_index, string(file_name));
         LOGINFO("Build index done\n");
+
+#endif
 
         return 0;
 }

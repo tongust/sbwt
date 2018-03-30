@@ -11,6 +11,8 @@
 #include <memory>
 #include <iomanip>
 #include <vector>
+#include <string>
+#include <unordered_map>
 
 #include "sbwt.h"
 #include "log.h"
@@ -22,6 +24,7 @@
 
 namespace sbwt {
 using std::vector;
+using std::unordered_map;
 using namespace utility;
 
 BuildIndexRawData::BuildIndexRawData():
@@ -485,6 +488,177 @@ void SortSbwt(
         r = d - c;
         SortSbwt(seq, seq_index, end-r, end, depth, length_ref, step);
 }
+
+        void SortSbwt(
+                        char *seq,
+                        uint32_t *seq_index,
+                        uint32_t begin,
+                        uint32_t end,
+                        uint32_t depth,
+                        const uint32_t &length_ref,
+                        const uint32_t &step,
+                        const uint32_t &length_limited
+        )
+        {
+                /* Condition of end */
+                if (begin+1 >= end || depth >= length_ref || depth >= length_limited) return;
+
+                if (end - begin == 2) {
+                        bool smaller = true;
+                        uint32_t i1 = seq_index[begin],
+                                        i2 = seq_index[begin+1];
+                        for (uint32_t i = depth; i < length_ref; i+=step) {
+                                char c1 = i1+i >= length_ref ? '$' : seq[i1+i];
+                                char c2 = i2+i >= length_ref ? '$' : seq[i2+i];
+                                if (c1 == '$' || c2 == '$') {
+                                        if (c1 != '$') {
+                                                smaller = false;
+                                        }
+                                        break;
+                                } else if (c1 != c2) {
+                                        smaller = c1 < c2;
+                                        break;
+                                }
+                        }
+                        if (!smaller) {
+                                seq_index[begin] = i2;
+                                seq_index[begin+1] = i1;
+                        }
+                        return;
+                }
+
+                int64_t a = 0, b = 0, c = 0,
+                                d = 0, r = 0, v = 0,
+                                distance = 0;
+                uint64_t tmpval = 0, tmpval1 = 0;
+                distance = end - begin;
+                a = (rand() % distance) + begin;
+
+                /* swap begin with a */
+                tmpval = seq_index[begin];
+                seq_index[begin] = seq_index[a];
+                seq_index[a] = tmpval;
+
+                tmpval1 = seq_index[begin] + depth;
+                /* Guarantee that: seq[index] or '$' if index > length(seq) */
+                v = tmpval1 >= length_ref ? '$' : seq[tmpval1];
+                a = b = begin + 1;
+                c = d = end - 1;
+
+                uint64_t size_ref64 = length_ref;
+
+                for (;;) {
+#if 1
+                        while (true) {
+                                if (b <= c)  {
+                                        tmpval1 = seq_index[b];
+                                        tmpval1 += depth;
+                                        r = (tmpval1 >= size_ref64) ? '$' : seq[tmpval1];
+                                        r -= v;
+                                        if (r > 0) {
+                                                break;
+                                        }
+                                } else {
+                                        break;
+                                }
+
+                                if (r == 0) {
+                                        /* swap a with b */
+                                        tmpval = seq_index[a];
+                                        seq_index[a] = seq_index[b];
+                                        seq_index[b] = tmpval;
+
+                                        ++a;
+                                }
+                                ++b;
+                        }
+
+                        while(true) {
+                                if (b <= c) {
+                                        tmpval1 = seq_index[c];
+                                        tmpval1 += depth;
+                                        r = (tmpval1 >= size_ref64) ? '$' : seq[tmpval1];
+                                        r -= v;
+                                        if (r < 0) {
+                                                break;
+                                        }
+                                } else {
+                                        break;
+                                }
+
+                                if (r == 0) {
+                                        /* swap c with d */
+                                        tmpval = seq_index[c];
+                                        seq_index[c] = seq_index[d];
+                                        seq_index[d] = tmpval;
+
+                                        --d;
+                                }
+                                --c;
+                        }
+                        if (b > c) break;
+#endif
+
+#if 0
+                        while ( b <= c &&
+			(tmpval1 = seq_index[b]+depth, r = (tmpval1 >= length_ref ? '$' : seq[tmpval1]) - v) <= 0
+			) {
+			if (r == 0) {
+				/* swap a with b */
+				tmpval = seq_index[a];
+				seq_index[a] = seq_index[b];
+				seq_index[b] = tmpval;
+
+				++a;
+			}
+			++b;
+		}
+
+		while (
+			b <= c &&
+			(tmpval1 = seq_index[c]+depth, r = (tmpval1 >= length_ref ? '$' : seq[tmpval1]) - v) >= 0
+			) {
+			if (r == 0) {
+				/* swap c with d */
+				tmpval = seq_index[c];
+				seq_index[c] = seq_index[d];
+				seq_index[d] = tmpval;
+
+				--d;
+			}
+			--c;
+		}
+		if (b > c) break;
+#endif
+                        /* swap b and c */
+                        tmpval = seq_index[b];
+                        seq_index[b] = seq_index[c];
+                        seq_index[c] = tmpval;
+                        ++b;
+                        --c;
+                }
+
+                int64_t t0 = a - begin;
+                int64_t t1 = b - a;
+                r = t0 < t1 ? t0 : t1;
+                VectorSwap(begin, b-r, r, seq_index);
+
+                t0 = d - c;
+                t1 = end - 1 - d;
+                r = t0 < t1 ? t0 : t1;
+                VectorSwap(b, end-r, r, seq_index);
+                r = b - a + begin;
+
+                SortSbwt(seq, seq_index, begin, r, depth, length_ref, step);
+
+                tmpval = seq_index[r] + depth;
+                if (tmpval < length_ref) {
+                        SortSbwt(seq, seq_index, r, end-d+c, depth+step, length_ref, step);
+                }
+
+                r = d - c;
+                SortSbwt(seq, seq_index, end-r, end, depth, length_ref, step);
+        }
 void SortSbwt(BuildIndexRawData &build_index)
 {
         return SortSbwt(build_index.seq_raw,
@@ -586,6 +760,28 @@ void BuildIndex(BuildIndexRawData &build_index) {
                 CountOccurrence(build_index);
         }
 }
+
+
+void BuildSortedIndexBlockwise(BuildIndexRawData &build_index)
+{
+         if (build_index.suffix_array && build_index.seq_raw) {
+                LOGINFO("Sort sbwt block-wise...\n")
+                SortSbwtBlockwise(build_index);
+                LOGINFO("SortSbwtBlockwise done\n");
+        }
+}
+void BuildSortedIndexTransCountOcc(BuildIndexRawData &build_index)
+{         if (build_index.suffix_array && build_index.seq_raw) {
+                LOGINFO("Transform...\t");
+                Transform(build_index);
+                LOGPUT("Done\n");
+                LOGINFO("CountOccurrence...\t");
+                CountOccurrence(build_index);
+                LOGPUT("Done\n");
+        }
+
+}
+
 
 void BuildIndexBlockwise(BuildIndexRawData &build_index) {
         if (build_index.suffix_array && build_index.seq_raw) {
@@ -930,5 +1126,316 @@ void SortSbwtBlockwise(
         r = d - c;
         SortSbwtBlockwise(seq, seq_index, end-r, end, depth, length_ref, step, num_block);
 }
+
+
+SecondIndex::SecondIndex(): array_ptr(nullptr), size(0) { }
+
+uint32_t SecondIndex::size_min = 30;
+
+SecondIndex::~SecondIndex()
+{
+        if (array_ptr != nullptr) {
+                delete []array_ptr;
+        }
+}
+
+
+void SecondIndex::RebuildIndex(BuildIndexRawData &build_index) {
+        std::string str_iter(size_seed, 0);
+        size = 0;
+
+        auto seq = build_index.seq_raw;
+        auto SA = build_index.suffix_array;
+        auto X = build_index.seq_raw;
+        auto N = build_index.length_ref;
+        auto period = build_index.period;
+        auto period_1 = period - 1;
+
+        if (N <= size_seed) {
+                std::cerr << "The length is less than " << size_seed << std::endl;
+                return;
+        }
+
+        uint32_t count;
+        uint32_t loop_end = size_seed * period;
+        /// Build second index
+        count = 0;
+        uint32_t index_array = 0;
+        uint32_t beg0 = 0;
+        uint32_t end0 = 0;
+        uint32_t depth0 = 0;
+        for (uint32_t i = 0; i < N; ++i) {
+                for (uint32_t j = 0; j < loop_end; j+=period) {
+                        if (str_iter[j/period] != X[(j+SA[i])%N]) {
+                                if (count != 0) {
+                                        /// Sort blockwise
+                                        if (count >= size_min && count < 65536) {
+                                                beg0 = i - count;
+                                                end0 = i;
+                                                /// sort to get index
+                                                SortSbwt(seq, SA, beg0, end0, 0, N, 1, loop_end);
+#if DEBUG_SECONDINDEX
+                                                cout << beg0 << ", " << end0 <<  "   " << count << "  " << SA[beg0] << " " << index_array << endl;
+#endif
+                                                unordered_map<uint32_t, uint16_t > mmap;
+                                                uint16_t tmp0 = 0;
+                                                for (uint32_t u = beg0; u < end0; ++u) {
+                                                        mmap[SA[u]] = tmp0;
+                                                        ++tmp0;
+                                                }
+
+                                                for (uint32_t tau = 1; tau != period; ++tau) {
+                                                        depth0 = tau * size_seed;
+                                                        SortSbwt(seq, SA, beg0, end0, depth0, N, 1, depth0 + size_seed);
+                                                        for (uint32_t u = beg0; u < end0; ++u) {
+                                                                uint32_t i_shift = (u-beg0) + index_array + 3 + (tau-1)*count;
+                                                                *(this->array_ptr + i_shift) = mmap[SA[u]];
+#if DEBUG_SECONDINDEX
+                                                                cout << *(array_ptr +i_shift) << " ";
+#endif
+                                                        }
+#if DEBUG_SECONDINDEX
+                                                        cout << endl;
+#endif
+                                                }
+
+                                                /// last sort
+                                                SortSbwt(seq, SA, beg0, end0, 0, N, 1, loop_end);
+                                                /// exchange
+                                                uint16_t *p16 = this->array_ptr + index_array;
+                                                uint32_t *p32 = (uint32_t*) p16;
+                                                *p32 = SA[beg0];
+                                                SA[beg0] = index_array;
+                                                *(this->array_ptr+index_array+2) = (uint16_t)count;
+
+                                                index_array += count*period_1 + 3;
+                                        }
+                                }
+
+                                count = 0;
+                                for (uint32_t k = 0; k != size_seed; ++k) {
+                                        str_iter[k] = X[(k*period+SA[i])%N];
+                                }
+                                break;
+                        }
+                } /* j */
+                ++count;
+        } /* i */
+
+        /// tail case
+        if (count != 0) {
+                if (count >= size_min && count < 65536) {
+                        SortSbwt(seq, SA, N-count, N, 0, N, 1, loop_end);
+                        beg0 = N-count;
+                        end0 = N;
+#if DEBUG_SECONDINDEX
+                        cout << beg0 << ", " << end0 <<  "   " << count << endl;
+#endif
+                        /// sort to get index
+                        SortSbwt(seq, SA, beg0, end0, 0, N, 1, loop_end);
+                        unordered_map<uint32_t, uint16_t > mmap;
+                        uint16_t tmp0 = 0;
+                        for (uint32_t u = beg0; u < end0; ++u) {
+                                mmap[SA[u]] = tmp0;
+                                ++tmp0;
+                        }
+
+                        for (uint32_t tau = 1; tau != period; ++tau) {
+                                depth0 = tau * size_seed;
+                                SortSbwt(seq, SA, beg0, end0, depth0, N, 1, depth0 + size_seed);
+                                for (uint32_t u = beg0; u < end0; ++u) {
+                                        uint32_t i_shift = (u-beg0) + index_array + 3 + (tau-1)*count;
+                                        *(this->array_ptr + i_shift) = mmap[SA[u]];
+                                }
+                        }
+
+                        /// last sort
+                        SortSbwt(seq, SA, beg0, end0, 0, N, 1, loop_end);
+                        /// exchange
+                        uint16_t *p16 = this->array_ptr + index_array;
+                        uint32_t *p32 = (uint32_t*) p16;
+                        *p32 = SA[beg0];
+                        *(this->array_ptr + index_array + 2) = (uint16_t)count;
+                }
+        }
+#if DEBUG_SECONDINDEX
+        /// visualization in array
+        this->PrintSecondIndex(build_index);
+#endif
+}
+
+
+void SecondIndex::PrintSecondIndex(BuildIndexRawData &build_index)
+{
+        if (this->array_ptr == nullptr) {
+                return;
+        }
+
+        std::string str_iter(size_seed, 0);
+
+        auto seq = build_index.seq_raw;
+        auto SA = build_index.suffix_array;
+        auto X = build_index.seq_raw;
+        auto N = build_index.length_ref;
+        auto period = build_index.period;
+        auto period_1 = period - 1;
+
+        if (N <= size_seed) {
+                std::cerr << "The length is less than " << size_seed << std::endl;
+                return;
+        }
+
+        uint32_t count;
+        uint32_t loop_end = size_seed * period;
+
+        count = 0;
+        for (uint32_t i = 0; i < N; ++i) {
+                for (uint32_t j = 0; j < loop_end; j+=period) {
+                        if (str_iter[j/period] != X[(j+SA[i])%N]) {
+                                if (count != 0) {
+                                        /// Sort blockwise
+                                        if (count >= size_min && count < 65536) {
+                                                /// Caution: may bring into SEGERROR
+                                                /// because SA[i] in "if (str_iter[j/period] != X[(j+SA[i])%N])" is
+                                                /// changed in to index of array.
+                                                uint32_t beg0 = i - count - 1;
+                                                uint32_t end0 = i;
+                                                uint32_t index_array = SA[beg0];
+                                                uint16_t *p16 = this->array_ptr + index_array;
+                                                uint32_t *p32 = (uint32_t*) p16;
+                                                uint32_t pos = *p32;
+                                                cout << beg0 << ", " << end0
+                                                     << "  " << SA[beg0]
+                                                     << "  " << p16[2]
+                                                     << "  " << pos
+                                                     << "  " << period
+                                                     << endl;
+                                                uint16_t size_seg = p16[2];
+                                                for (uint32_t i0 = beg0; i0 < end0; ++i0) {
+                                                        uint32_t p0 = SA[i0];
+                                                        if (i0 == beg0) {
+                                                                p0 = pos;
+                                                        }
+                                                        for (uint32_t j0 = 0; j0 < loop_end; ++j0) {
+                                                                if (j0 % period == 0) {
+                                                                        cout << "\033[1;31m" << X[(j0 + p0) % N] << "\033[0m";
+                                                                }
+                                                                else {
+                                                                        cout << X[(j0 + p0) % N];
+                                                                }
+                                                                if (j0 % size_seed == (size_seed-1)) {
+                                                                        cout << " ";
+                                                                }
+                                                        }
+                                                        cout <<endl;
+                                                }
+                                                p16 += 3;
+                                                for (uint32_t tau = 1; tau < period; ++tau) {
+                                                        p16 += (tau-1)*size_seg;
+                                                        cout << endl;
+
+                                                        for (uint32_t i0 = 0; i0 < size_seg; ++i0) {
+                                                                uint32_t p0 = SA[p16[i0] + beg0];
+                                                                if (p0 == 0) {
+                                                                        p0 = pos;
+                                                                }
+
+                                                                for (uint32_t j0 = 0; j0 < loop_end; ++j0) {
+                                                                        if (j0 % period == 0) {
+                                                                                cout << "\033[1;31m" << X[(j0 + p0) % N] << "\033[0m";
+                                                                        }
+                                                                        else {
+                                                                                cout << X[(j0 + p0) % N];
+                                                                        }
+                                                                        if (j0 % size_seed == (size_seed-1)) {
+                                                                                cout << " ";
+                                                                        }
+                                                                }
+                                                                cout <<endl;
+                                                        }
+                                                        //for (uint32_t i0 = 0; i0 < size_seg; ++i0) {
+                                                        //        cout << p16[i0] << " ";
+                                                        //}
+                                                        //cout << endl;
+                                                }
+                                        }
+                                }
+
+                                count = 0;
+                                for (uint32_t k = 0; k != size_seed; ++k) {
+                                        str_iter[k] = X[(k*period+SA[i])%N];
+                                }
+                                break;
+                        }
+                } /* j */
+                ++count;
+        } /* i */
+
+        /// tail case
+        if (count != 0) {
+                if (count >= size_min && count < 65536) {
+                        /// Ignore
+                }
+        }
+
+}
+
+
+
+/// Init SecondIndex data structure
+void SecondIndex::RebuildIndexInit(BuildIndexRawData &build_index, uint32_t size_seed)
+{
+        this->size_seed = size_seed;
+        std::string str_iter(size_seed, 0);
+        size = 0;
+
+        auto seq = build_index.seq_raw;
+        auto SA = build_index.suffix_array;
+        auto X = build_index.seq_raw;
+        auto N = build_index.length_ref;
+        auto period = build_index.period;
+        auto period_1 = period - 1;
+
+        if (N <= size_seed) {
+                std::cerr << "The length is less than " << size_seed << std::endl;
+                return;
+        }
+
+        uint32_t count;
+        uint32_t loop_end = size_seed * period;
+
+        count = 0;
+        for (uint32_t i = 0; i < N; ++i) {
+                for (uint32_t j = 0; j < loop_end; j+=period) {
+                        if (str_iter[j/period] != X[(j+SA[i])%N]) {
+                                if (count != 0) {
+                                        /// Sort blockwise
+                                        //cout << (i - count) << "," << (i) << endl;
+                                        if (count >= size_min && count < 65536) {
+                                                size += 3 + count*period_1;
+                                        }
+                                }
+
+                                count = 0;
+                                for (uint32_t k = 0; k != size_seed; ++k) {
+                                        str_iter[k] = X[(k*period+SA[i])%N];
+                                }
+                                break;
+                        }
+                } /* j */
+                ++count;
+        } /* i */
+
+        /// tail case
+        if (count != 0) {
+                if (count >= size_min && count < 65536) {
+                        size += 3 + count*period_1;
+                }
+        }
+
+        array_ptr = new uint16_t[size];
+
+}
+
 
 } /* namespace sbwt */
