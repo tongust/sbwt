@@ -1526,4 +1526,30 @@ namespace sbwt
                 delete[] ptr_array_rc;
         }
 
+
+        void SortedPackedSearch(char **argv)
+        {
+                 /// Build index from files
+                auto begin_time_index = std::chrono::high_resolution_clock::now();
+
+                string reads_filename = string(argv[1]);
+                string prefix_filename = string(argv[2]);
+                BuildIndexRawData build_index(prefix_filename);
+                /// test second index
+                SecondIndex second_index(prefix_filename);
+
+                auto end_time_index = std::chrono::high_resolution_clock::now();
+                auto duration_index = std::chrono::duration_cast<std::chrono::milliseconds>(end_time_index-begin_time_index).count();
+                LOGINFO( "Load index elapsed time:\t"
+                                << duration_index
+                                << " ms"
+                                << std::endl);
+#if DEBUG_SECONDINDEX
+                second_index.PrintSecondIndex(build_index);
+                sbwt::PrintFullSearchMatrix(build_index);
+#endif
+
+        }
+
+
 } /* namespace sbwt */

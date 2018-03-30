@@ -72,6 +72,20 @@ static inline void writeU64(std::ostream& out, uint64_t x) {
         out.write((const char*)&x, 8);
 }
 
+
+/**
+ * Read a 16-bit unsigned from an input stream.
+ * Endianness: little
+ */
+static inline uint16_t readU16(std::istream& in) {
+        uint16_t x;
+        in.read((char *)&x, 2);
+        return x;
+}
+
+
+/**
+
 /**
  * Read a 32-bit unsigned from an input stream, inverting endianness
  * if necessary.

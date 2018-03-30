@@ -1130,7 +1130,46 @@ void SortSbwtBlockwise(
 
 SecondIndex::SecondIndex(): array_ptr(nullptr), size(0) { }
 
-uint32_t SecondIndex::size_min = 30;
+SecondIndex::SecondIndex(const string &prefix_filename)
+                : array_ptr(nullptr)
+{
+        string file_second_filename = prefix_filename + ".second.sbwt";
+        std::ifstream second_fin(file_second_filename.c_str(), std::ios_base::in | ios::binary);
+
+        if (!second_fin.is_open()) {
+                std::cerr << "Cannot open index files: " << prefix_filename << std::endl;
+                return;
+        }
+
+        uint16_t tmp16 = readU16(second_fin);
+        bool is_big_endian = tmp16 != 0;
+
+        if (is_big_endian) {
+                LOGERROR("Current platform is big endian."
+                         << " SBWT will not work on big-endian platform.");
+        } else {
+                this->size = readU64(second_fin, is_big_endian);
+                this->size_min = readU32(second_fin, is_big_endian);
+                this->size_seed = readU32(second_fin, is_big_endian);
+
+                if (size > 0) {
+                        this->array_ptr = new uint16_t[size];
+                }
+
+                if (this->array_ptr != nullptr) {
+                        uint16_t *ptr = array_ptr;
+
+                        for (uint32_t i = 0; i < size; ++i) {
+                                *ptr = readU16(second_fin);
+                                ++ptr;
+                        }
+                }
+        }
+
+        second_fin.close();
+}
+
+uint32_t SecondIndex::size_min = 50;
 
 SecondIndex::~SecondIndex()
 {
@@ -1142,7 +1181,6 @@ SecondIndex::~SecondIndex()
 
 void SecondIndex::RebuildIndex(BuildIndexRawData &build_index) {
         std::string str_iter(size_seed, 0);
-        size = 0;
 
         auto seq = build_index.seq_raw;
         auto SA = build_index.suffix_array;

@@ -89,6 +89,11 @@ int main(int argc, char **argv)
         /// write into disk
         LOGINFO("Write into disk...\n");
         sbwt::WriteIntoDiskBuildIndex(build_index, string(file_name));
+
+        LOGINFO("Write second index...\n");
+        sbwt::WriteIntoDiskBuildSecondIndex(build_index, string(file_name), secondIndex);
+        LOGINFO("Done\n");
+
         LOGINFO("Build index done\n");
 
 

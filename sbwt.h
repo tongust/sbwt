@@ -53,6 +53,8 @@ struct BuildIndexRawData{
 class SecondIndex{
 public:
 	SecondIndex();
+	/// build second index from files stream
+        SecondIndex(const string &);
 
         /// array consists of header and sequence
 	///     1. header: the position in reference;
@@ -63,7 +65,7 @@ public:
 	uint64_t size;
         /// min size of array to sort
         static uint32_t size_min;
-        ///
+        /// size of seed
         uint32_t size_seed;
 
 	~SecondIndex();

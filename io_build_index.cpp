@@ -126,6 +126,43 @@ void WriteIntoDiskBuildIndex(sbwt::BuildIndexRawData &build_index, const string 
 }
 
 
+void WriteIntoDiskBuildSecondIndex(
+                sbwt::BuildIndexRawData &build_index,
+                const string &prefix_filename,
+                SecondIndex &second_index)
+{
+        string file_second_filename = prefix_filename + ".second.sbwt";
+        std::ofstream second_fout(file_second_filename.c_str(), std::ios::binary);
+        LOGINFO("Write second index...\n");
+        bool is_bigendian = currentlyBigEndian();
+        if (is_bigendian) {
+                LOGERROR("Current platform is big endian."
+                         << " SBWT will not work on big-endian platform.");
+                writeU16(second_fout, (uint16_t)is_bigendian);
+                second_fout.flush();
+                second_fout.close();
+                return;
+        }
+
+        /// Write flag on endianness
+        writeU16(second_fout, (uint16_t)is_bigendian);
+        /// meta information
+        writeU64(second_fout, second_index.size);
+        writeU32(second_fout, second_index.size_min);
+        writeU32(second_fout, second_index.size_seed);
+
+        /// Write array
+        auto ptr = second_index.array_ptr;
+        for (uint32_t i = 0; i < second_index.size; ++i) {
+                writeU16(second_fout, *ptr);
+                ++ptr;
+        }
+
+        second_fout.flush();
+        second_fout.close();
+}
+
+
 } /* namespace sbwt */
 
 void TestWriteBinary(vector<int> &nums, const string &file1) {

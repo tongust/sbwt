@@ -8,6 +8,7 @@
 namespace sbwt{
 using std::string;
 void WriteIntoDiskBuildIndex(sbwt::BuildIndexRawData&, const string&);
+void WriteIntoDiskBuildSecondIndex(sbwt::BuildIndexRawData&, const string&, SecondIndex&);
 
 } /* namespace sbwt */
 
