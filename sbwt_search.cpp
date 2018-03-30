@@ -1283,8 +1283,18 @@ namespace sbwt
                                                 if (psa == psa_end) {
                                                         goto loop_verification;
                                                 }
-
-                                                index = *psa - index_tmp;
+                                                /// Bug: it may happen that: *psa < index_tmp
+                                                /// For example:
+                                                ///     0    5
+                                                /// Ref ACCCGTAGATTGAGTTGC...
+                                                ///   0  3
+                                                /// P TTACCCGTAGATTGAGTTGC...
+                                                index = *psa;
+                                                if (index < index_tmp) {
+                                                        ++psa;
+                                                        continue;
+                                                }
+                                                index -= index_tmp;
 
                                                 b = ref_bin_ptr_array[index & 3/*mod 4*/] + (index >> 2);
                                                 p = (uint64_t *) b;
@@ -1312,8 +1322,14 @@ namespace sbwt
                                                 if (psa == psa_end) {
                                                         goto loop_verification;
                                                 }
+                                                // Bug here
+                                                index = *psa;
+                                                if (index < index_tmp) {
+                                                        ++psa;
+                                                        continue;
+                                                }
+                                                index -= index_tmp;
 
-                                                index = *psa - index_tmp;
                                                 count  = 0;
 
                                                 b = ref_bin_ptr_array[index & 3/* mod 4 */] + (index >> 2);
@@ -1385,7 +1401,14 @@ namespace sbwt
                                                         goto loop_verification_rc;
                                                 }
 
-                                                index = *psa - index_tmp;
+                                                //index = *psa - index_tmp;
+                                                // Bug here
+                                                index = *psa;
+                                                if (index < index_tmp) {
+                                                        ++psa;
+                                                        continue;
+                                                }
+                                                index -=  index_tmp;
 
                                                 b = ref_bin_ptr_array[index & 3/* mod 4 */] + (index >> 2);
                                                 p = (uint64_t *) b;
@@ -1414,7 +1437,15 @@ namespace sbwt
                                                         goto loop_verification_rc;
                                                 }
 
-                                                index = *psa - index_tmp;
+                                                //index = *psa - index_tmp;
+                                                // Bug here
+                                                index = *psa;
+                                                if (index < index_tmp) {
+                                                        ++psa;
+                                                        continue;
+                                                }
+                                                index -= index_tmp;
+
                                                 count  = 0;
 
                                                 b = ref_bin_ptr_array[index & 3/* mod 4 */] + (index >> 2);
