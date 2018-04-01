@@ -199,7 +199,8 @@ def test_exact_match():
         os.system("rm -rf genome-test.fa* reads-test.fa *.log")
         num_ref = 150000
         size_read = (num_ref / 150) - 10;
-        period = random.randrange(2, 10)
+        period = random.randrange(2, 5)
+        period = 3
         reads = "reads-test.fa"
         ref = "genome-test.fa"
 
@@ -207,7 +208,7 @@ def test_exact_match():
         print("Generating faked reads fasta...")
         os.system("python ./GenReferenceAndReads.py genome-test.fa 150 " + str(size_read) + " > reads-test.fa")
 
-        os.system("./build_index " + str(period) + " " + ref + " > /dev/null 2>&1")
+        os.system("./build_index " + ref + " " + str(period) + " 50" + " > /dev/null 2>&1")
 
         os.system("./sbwt reads-test.fa genome-test.fa > res.sbwt.log")
 
