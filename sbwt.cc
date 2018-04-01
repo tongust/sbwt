@@ -1288,13 +1288,17 @@ void SecondIndex::RebuildIndex(BuildIndexRawData &build_index) {
                 if (count >= size_min && count < 65536) {
                         beg0 = N-count;
                         end0 = N;
+                        uint32_t pos_saved = SA[beg0];
 #if DEBUG_SECONDINDEX
                         cout << beg0 << ", " << end0 <<  "   " << count << endl;
 #endif
                         unordered_map<uint32_t, uint16_t > mmap;
+                        /// to restore SA[beg0, end0)
+                        vector<uint32_t > index_backup(count,0);
                         uint16_t tmp0 = 0;
                         for (uint32_t u = beg0; u < end0; ++u) {
                                 mmap[SA[u]] = tmp0;
+                                index_backup[tmp0] = SA[u];
                                 ++tmp0;
                         }
 
@@ -1310,7 +1314,13 @@ void SecondIndex::RebuildIndex(BuildIndexRawData &build_index) {
                         /// exchange
                         uint16_t *p16 = this->array_ptr + index_array;
                         uint32_t *p32 = (uint32_t*) p16;
-                        *p32 = SA[beg0];
+                        *p32 = pos_saved;
+                        /// restore SA
+                        for (uint32_t u = beg0; u < end0; ++u) {
+                                SA[u] = index_backup[u - beg0];
+                        }
+                        /// change the first element of SA
+                        SA[beg0] = index_array;
                         *(this->array_ptr + index_array + 2) = (uint16_t)count;
                 }
         }

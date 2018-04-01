@@ -1623,7 +1623,6 @@ namespace sbwt
                 uint32_t distance_2nd = 0;
                 uint32_t mid_index_2nd = 0;
                 uint32_t mid_pos_2nd = 0;
-                uint32_t tmp_2nd_index = 0;
                 uint16_t *ptr16_2nd_begin = second_index.array_ptr;
                 uint16_t *ptr16_2nd = nullptr;
                 uint32_t index_2nd = 0;
@@ -1745,7 +1744,7 @@ namespace sbwt
                                         is_2nd_extend_success = false;
                                         psa = SA + L;
                                         size_range = R - L + 1;
-                                        psa_end = SA + size_range;
+                                        psa_end = psa + size_range;
 
                                         index_2nd = *psa;
                                         ptr16_2nd = ptr16_2nd_begin + index_2nd;
@@ -1808,11 +1807,7 @@ namespace sbwt
                                                         mid_pos_2nd = pos_original;\
                                                 else\
                                                         mid_pos_2nd = *(psa + mid_index_2nd);\
-                                                tmp_2nd_index = mid_pos_2nd + current_pos;\
-                                                if (tmp_2nd_index >= N)\
-                                                        compare_flag = 1;\
-                                                else\
-                                                        compare_flag = strncmp(X + tmp_2nd_index, ptr, size_seed)
+                                                compare_flag = strncmp(X + mid_pos_2nd + current_pos, ptr, size_seed)
 
                                                 /// binary search
                                                 while (ptr16_left < ptr16_right) {
