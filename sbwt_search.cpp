@@ -1537,6 +1537,9 @@ namespace sbwt
                 BuildIndexRawData build_index(prefix_filename);
                 /// test second index
                 SecondIndex second_index(prefix_filename);
+                if (second_index.Empty()) {
+                        LOGERROR("The second index is empty");
+                }
 
                 auto end_time_index = std::chrono::high_resolution_clock::now();
                 auto duration_index = std::chrono::duration_cast<std::chrono::milliseconds>(end_time_index-begin_time_index).count();
@@ -1544,10 +1547,619 @@ namespace sbwt
                                 << duration_index
                                 << " ms"
                                 << std::endl);
-#if DEBUG_SECONDINDEX
-                second_index.PrintSecondIndex(build_index);
-                sbwt::PrintFullSearchMatrix(build_index);
+#if 0
+                {
+
+                        uint32_t count1 = 0;
+                        for (;;) {
+                                if (count1 >= second_index.size) {
+                                        break;
+                                }
+                                uint16_t *p16 = second_index.array_ptr + count1;
+                                uint32_t pos = *((uint32_t*)p16);
+                                uint16_t size_seg = p16[2];
+                                count1 += size_seg * build_index.period + 3;
+                                p16 += 3;
+                                cout << "pos: " << pos << ", size_seg: " << size_seg << endl;
+                                for (uint32_t tau = 0; tau < build_index.period; ++tau) {
+                                        for (uint32_t i0 = 0; i0 < size_seg; ++i0) {
+                                                cout << p16[tau*size_seg+i0] << " ";
+                                        }
+                                        cout << endl;
+                                }
+
+                        }
+                        //sbwt::PrintFullSearchMatrix(build_index);
+                        second_index.PrintSecondIndex(build_index);
+                }
 #endif
+
+                auto begin_time_search = std::chrono::high_resolution_clock::now();
+
+                uint32_t period = build_index.period;
+                uint32_t N = build_index.length_ref;
+                uint32_t *C = build_index.first_column;
+                uint32_t **Occ = build_index.occurrence;
+                uint32_t *SA = build_index.suffix_array;
+
+                static uint8_t *ref_bin_ptr_array[4] = {nullptr};
+                ref_bin_ptr_array[0] = build_index.bin_8bit;
+                ref_bin_ptr_array[1] = build_index.bin_8bit + 1*build_index.size_bin_8bit;
+                ref_bin_ptr_array[2] = build_index.bin_8bit + 2*build_index.size_bin_8bit;
+                ref_bin_ptr_array[3] = build_index.bin_8bit + 3*build_index.size_bin_8bit;
+
+                /// reads
+                /// Read first segment.
+                reads_buffer rb_reads(reads_filename);
+                rb_reads.ReadNext();/// header
+                if (rb_reads.length_read < 1) {
+                        LOGINFO("Empty reads\n");
+                        return;
+                }
+                char head_str[1024*1024] = {'\0'};
+                strcpy(head_str, rb_reads.buffer);
+                /// strip the new line char.
+                head_str[rb_reads.length_read] = '\0';
+
+                /// count matched segment
+                uint64_t total_reads = 1;
+                uint64_t matched_reads = 0;
+
+                rb_reads.ReadNext();/// sequence
+
+                /// For second index
+                /// the minimum distance between L and R
+                uint32_t L_R_min = second_index.size_min - 2;
+                uint32_t size_seed = second_index.size_seed;
+                uint32_t size_std = size_seed * period;
+                uint16_t *ptr16_right = nullptr;
+                uint16_t *ptr16_left = nullptr;
+                char *ptr_iter = nullptr;
+                uint16_t *ptr16_mid = nullptr;
+                bool is_2nd_success = false;/* seed */
+                bool is_2nd_extend_success = false;/* extend */
+                int compare_flag = 0;
+                uint32_t current_pos = 0;
+                uint32_t distance_2nd = 0;
+                uint32_t mid_index_2nd = 0;
+                uint32_t mid_pos_2nd = 0;
+                uint16_t *ptr16_2nd_begin = second_index.array_ptr;
+                uint16_t *ptr16_2nd = nullptr;
+                uint32_t index_2nd = 0;
+                uint32_t size_range = 0;
+                uint32_t pos_original = 0;
+
+                if (rb_reads.length_read < period || size_std < rb_reads.length_read) {
+                        LOGERROR("the size of read is shorter than "
+                                                 << size_std);
+                        return;
+                }
+
+                // Assuming the length of single sequence segment is kept same.
+                uint32_t size_read_char = rb_reads.length_read;
+                uint32_t size_read_mod4 = size_read_char % 4;
+                uint32_t size_read_bit8 = (size_read_mod4) ? (size_read_char >> 2) + 1 : size_read_char >> 2;
+                uint32_t size_read_mod32 = size_read_char % 32;
+                uint32_t size_read_bit32 = size_read_mod32 ?
+                                           (size_read_char >> 5) + 1:
+                                           size_read_char >> 5;
+                uint32_t size_read_bit32_1 = size_read_bit32 - 1;
+                uint64_t popcount_mask = DnaStringRightShiftMaskReverse[size_read_mod32];
+
+                /// binary buffer for segment
+                uint64_t read_bin_buffer[256] = {0};
+                uint64_t read_bin_buffer_rc[256] = {0};
+                uint8_t *read_bin = (uint8_t*)read_bin_buffer;
+                uint8_t *read_bin_rc = (uint8_t*)read_bin_buffer_rc;
+                uint64_t *p = nullptr;
+                uint64_t *p_end = nullptr;
+                uint64_t *q = read_bin_buffer;
+                uint64_t *q_end = nullptr;
+                uint64_t *q_end_rc = nullptr;
+                if (size_read_mod32) {
+                        q_end = q + size_read_bit32_1;
+                        q_end_rc = read_bin_buffer_rc + size_read_bit32_1;
+                } else {
+                        q_end = q + size_read_bit32;
+                        q_end_rc = read_bin_buffer_rc + size_read_bit32;
+                }
+
+                uint32_t L = 0, R = 0;
+                uint32_t N_1 = N - 1;
+
+                // Not sure the addr. of buffer will be changed.
+                // ---
+                // Alternatively, before calling getline(), *lineptr can contain a
+                // pointer to a malloc(3)-allocated buffer *n bytes in size.  If the
+                // buffer is not large enough to hold the line, getline() resizes it
+                // with realloc(3), updating *lineptr and *n as necessary.
+                // ---
+                // Reference: http://man7.org/linux/man-pages/man3/getline.3.html
+
+                char key = 0;
+                static uint32_t a = 0;
+                uint32_t lmd = 0;
+                uint32_t *end_array     = new uint32_t[period];
+                char *ptr               = rb_reads.buffer + (size_read_char - 1);
+                char *ptr_reads         = rb_reads.buffer;
+                char *ptr_end           = rb_reads.buffer + size_read_char;
+                char **ptr_array        = new char*[period];
+                char **ptr_array_rc     = new char*[period];
+                char *X = build_index.seq_raw;
+                uint32_t *begin_index   = new uint32_t[period];
+
+                uint32_t index_tmp, index;
+
+                uint32_t *psa, *psa_end;
+
+                {
+                        uint32_t tmp0 = size_read_char / period;
+                        uint32_t tmp1 = size_read_char % period;
+
+                        for (uint32_t i = 0; i != period; ++i) {
+                                end_array[i]    = tmp0 + (i < tmp1);
+                                ptr_array[i]    = ptr - i;
+                                ptr_array_rc[i] = ptr_reads + i;
+                                begin_index[i]  = size_read_char - ((end_array[i] - 1)*period + i + 1);
+                        }
+                }
+
+                uint32_t count  = 0;
+
+                uint8_t *b              = nullptr;
+                uint64_t v = 0;
+
+                char flag_minus_plus;
+
+                uint32_t i;
+                for(;;) {
+                        /// forward
+                        flag_minus_plus = '+';
+                        sbwtio::BaseChar2Binary8B(ptr_reads, size_read_bit8, read_bin);
+                        i = 0;
+                        for (;;)
+                        {
+                                lmd = end_array[i];
+                                ptr = ptr_array[i];
+
+                                /// Init
+                                key = *ptr;
+                                a = charToDna5_32bit[key];
+                                L = C[a];
+                                R = C[a] + Occ[a][N_1] - 1;
+
+                                for (uint32_t j = 1; j != lmd; ++j) {
+                                        ptr -= period;
+                                        key = *ptr;
+                                        a = charToDna5_32bit[key];
+                                        L = C[a] + Occ[a][L-1];
+                                        R = C[a] + Occ[a][R] - 1;
+                                        if (L > R) {
+                                                goto loop_verification;
+                                        }
+                                }
+
+                                /// Use second index to power searching
+                                if (R - L > L_R_min && R-L < 65535/* TODO */) {
+                                        is_2nd_extend_success = false;
+                                        psa = SA + L;
+                                        size_range = R - L + 1;
+                                        psa_end = SA + size_range;
+
+                                        index_2nd = *psa;
+                                        ptr16_2nd = ptr16_2nd_begin + index_2nd;
+                                        /// if index_2nd == 0
+                                        pos_original = *(uint32_t*)ptr16_2nd;
+
+                                        ptr16_2nd += 3;
+#if 0
+                                        cout << "L: " << L
+                                             << " R: " << R
+                                             << " *psa: " << *psa
+                                             << " *psa_end: " << *psa_end
+                                             << " size_range: " << size_range
+                                             << " seed: ";
+                                        for (uint32_t u00 = 0; u00 < size_seed; ++u00) {
+                                                cout << ptr[u00*period];
+                                        }
+                                        cout << endl;
+#endif
+
+#if 0
+                                        /// visualization
+                                        cout << "Original SA" << endl;
+                                        for (uint32_t u = L; u <= R; ++u) {
+                                                uint32_t u0 = *(SA + u);
+                                                if (u == L) {
+                                                        u0 = pos_original;
+                                                }
+                                                for (uint32_t j0 = 0; j0 < size_std; ++j0) {
+                                                                if (j0 % period == 0) {
+                                                                        cout << "\033[1;31m" << X[(j0 + u0) % N] << "\033[0m";
+                                                                }
+                                                                else {
+                                                                        cout << X[(j0 + u0) % N];
+                                                                }
+                                                                if (j0 % size_seed == (size_seed-1)) {
+                                                                        cout << " ";
+                                                                }
+
+                                                }
+                                                cout << endl;
+                                        }
+#endif
+                                        char *cmp_p = ptr;
+                                        char *cmp_r = nullptr;
+
+                                        current_pos = 0;
+                                        for (uint32_t tau = 0; tau != period; ++tau) {
+                                                if (ptr_end < ptr + size_seed) {
+                                                        break;
+                                                }
+                                                /// array: ptr16_2nd,
+                                                /// size:  size_range
+                                                ptr16_left = ptr16_2nd;
+                                                ptr16_right = ptr16_left + size_range;
+                                                uint16_t *ptr16_2nd_head = ptr16_2nd;
+                                                uint16_t *ptr16_2nd_tail = ptr16_right - 1;
+                                                is_2nd_success = false;
+                      #define COMPARE_2ND_INDEX if (mid_index_2nd == 0) \
+                                                        mid_pos_2nd = pos_original;\
+                                                else\
+                                                        mid_pos_2nd = *(psa + mid_index_2nd);\
+                                                compare_flag = strncmp(X + mid_pos_2nd + current_pos, ptr, size_seed)
+
+                                                /// binary search
+                                                while (ptr16_left < ptr16_right) {
+                                                        distance_2nd = ptr16_right - ptr16_left;
+                                                        if (distance_2nd == 1) {
+                                                                ptr16_mid = ptr16_left;
+                                                                mid_index_2nd = *ptr16_mid;
+                                                                COMPARE_2ND_INDEX;
+                                                                is_2nd_success = compare_flag == 0;
+                                                                break;
+                                                        } else {
+                                                                ptr16_mid = ptr16_left + (distance_2nd / 2);
+                                                                mid_index_2nd = *ptr16_mid;
+                                                                COMPARE_2ND_INDEX;
+                                                                if (compare_flag == 0) {
+                                                                        is_2nd_success = true;
+                                                                        break;
+                                                                } else if (compare_flag > 0)/* mid_key > key */ {
+                                                                        ptr16_right = ptr16_mid;
+                                                                } else {
+                                                                        ptr16_left = ptr16_mid;
+                                                                }
+                                                        }
+                                                }
+
+                                                /// Whether seeding successful
+                                                if (is_2nd_success) {
+                                                        /// Second index success, need verification.
+                                                        /// range search [left, right]
+                                                        /// Mid
+                                                        /// Caution
+                                                        if (mid_pos_2nd < current_pos) {
+                                                                continue;
+                                                        }
+
+                              #define EXTEND_2nd_INDEX  ptr_iter = ptr_reads;\
+                                                        index = mid_pos_2nd - (cmp_p - ptr_reads);\
+                                                        cmp_r = X + index;/* Compare from front of read */\
+                                                        count = 0;\
+                                                        for (;ptr_iter != ptr_end;) {\
+                                                                if (*cmp_r++ != *ptr_iter++) {\
+                                                                        ++count;\
+                                                                        if (count >= period) {\
+                                                                                break;\
+                                                                        }\
+                                                                }\
+                                                        }\
+                                                        is_2nd_extend_success = count < period;\
+                                                        if(is_2nd_extend_success)\
+                                                                goto match_success
+
+                                                        EXTEND_2nd_INDEX;
+                                                        /// left <==
+                                                        ptr16_left = ptr16_mid;
+                                                        /// check the head
+                                                        if (ptr16_left != ptr16_2nd_head) {
+                                                                while (--ptr16_left != ptr16_2nd_head) {
+                                                                        mid_index_2nd = *ptr16_left;
+                                                                        COMPARE_2ND_INDEX;
+                                                                        /// seeding successful
+                                                                        if (compare_flag == 0) {
+                                                                                /// Caufion
+                                                                                if (mid_pos_2nd < current_pos) {
+                                                                                        continue;
+                                                                                }
+                                                                                EXTEND_2nd_INDEX;
+                                                                        }
+                                                                }
+                                                        }
+                                                        /// ==> right
+                                                        ptr16_right = ptr16_mid;
+                                                        /// check head
+                                                        if (ptr16_right != ptr16_2nd_tail) {
+                                                                while (++ptr16_right != ptr16_2nd_tail) {
+                                                                        mid_index_2nd = *ptr16_right;
+                                                                        COMPARE_2ND_INDEX;
+                                                                        /// seeding successful
+                                                                        if (compare_flag == 0) {
+                                                                                /// Caution
+                                                                                if (mid_pos_2nd < current_pos) {
+                                                                                        continue;
+                                                                                }
+                                                                                EXTEND_2nd_INDEX;
+                                                                        }
+                                                                }
+                                                        }
+                                                }
+
+                                                //for (uint32_t u = 0; u != size_seed; ++u) { cout << ptr[u]; } cout << endl;
+                                                ptr16_2nd += 3 + size_range;
+                                                ptr += size_seed;
+                                                current_pos += size_seed;
+                                        }
+                                        /// second index failed
+                                        goto loop_verification;
+                                }
+
+                                psa = SA + L;
+                                psa_end = SA + R + 1;
+                                index_tmp = begin_index[i];
+
+                                // packed method
+                                if (size_read_mod32) {
+                                        for (;;) {
+                                                psa_loop_if:
+                                                if (psa == psa_end) {
+                                                        goto loop_verification;
+                                                }
+                                                /// Bug: it may happen that: *psa < index_tmp
+                                                /// For example:
+                                                ///     0    5
+                                                /// Ref ACCCGTAGATTGAGTTGC...
+                                                ///   0  3
+                                                /// P TTACCCGTAGATTGAGTTGC...
+                                                index = *psa;
+                                                if (index < index_tmp) {
+                                                        ++psa;
+                                                        continue;
+                                                }
+                                                index -= index_tmp;
+
+                                                b = ref_bin_ptr_array[index & 3/*mod 4*/] + (index >> 2);
+                                                p = (uint64_t *) b;
+                                                q = read_bin_buffer;/// Bug Here
+
+                                                p_end = p + size_read_bit32_1;
+                                                v = (*p_end) ^ (*q_end);
+                                                v &= popcount_mask;
+                                                count = HammingWeightDna64(v);
+
+                                                for (; p != p_end;) {
+                                                        v = (*p++) ^ (*q++);
+                                                        count += HammingWeightDna64(v);
+                                                        if (count > period) {
+                                                                ++psa;// Careful about its position
+                                                                goto psa_loop_if;
+                                                        }
+                                                }
+
+                                                goto match_success;
+                                        } // psa
+                                } else {
+                                        for (;;) {
+                                                psa_loop_else:
+                                                if (psa == psa_end) {
+                                                        goto loop_verification;
+                                                }
+                                                // Bug here
+                                                index = *psa;
+                                                if (index < index_tmp) {
+                                                        ++psa;
+                                                        continue;
+                                                }
+                                                index -= index_tmp;
+
+                                                count  = 0;
+
+                                                b = ref_bin_ptr_array[index & 3/* mod 4 */] + (index >> 2);
+                                                p = (uint64_t *) b;
+                                                q = read_bin_buffer;/// Bug Here
+
+                                                p_end = p + size_read_bit32;
+
+                                                for (; p != p_end;) {
+                                                        v = (*p++) ^ (*q++);
+                                                        count += HammingWeightDna64(v);
+                                                        if (count > period) {
+                                                                ++psa;// Careful about its position
+                                                                goto psa_loop_else;
+                                                        }
+                                                }
+
+                                                goto match_success;
+                                        } // psa
+                                }
+
+                                /// loop verification
+                                loop_verification:
+                                if (++i == period) {
+                                        /// Still not matched.
+                                        goto match_failure;
+                                }
+                        }/* i in [0, period) */
+
+                        /// failed in forward searching
+                        match_failure:
+                        /// Reverse Complement Binary Stream
+                        sbwtio::BaseChar2Binary8B_RC(read_bin, size_read_char, read_bin_rc);
+
+                        i = 0;
+                        flag_minus_plus = '-';
+                        for (;;)
+                        {
+                                lmd = end_array[i];
+                                ptr = ptr_array_rc[i];/// rc
+
+                                /// Init
+                                key = *ptr;
+                                a = rcCharToDna5_32bit[key];/// rc
+                                L = C[a];
+                                R = C[a] + Occ[a][N_1] - 1;
+
+                                for (uint32_t j = 1; j != lmd; ++j) {
+                                        ptr += period;/// rc
+                                        key = *ptr;
+                                        /// Bugs here
+                                        a = rcCharToDna5_32bit[key];/// rc
+                                        L = C[a] + Occ[a][L-1];
+                                        R = C[a] + Occ[a][R] - 1;
+                                        if (L > R) {
+                                                goto loop_verification_rc;
+                                        }
+                                }
+
+                                // TODO Use 2nd index to power reverse-complemently searching
+                                psa = SA + L;
+                                psa_end = SA + R + 1;
+                                index_tmp = begin_index[i];
+
+                                // packed method
+                                if (size_read_mod32) {
+                                        for (;;) {
+                                                psa_loop_if_rc:
+                                                if (psa == psa_end) {
+                                                        goto loop_verification_rc;
+                                                }
+
+                                                //index = *psa - index_tmp;
+                                                // Bug here
+                                                index = *psa;
+                                                if (index < index_tmp) {
+                                                        ++psa;
+                                                        continue;
+                                                }
+                                                index -=  index_tmp;
+
+                                                b = ref_bin_ptr_array[index & 3/* mod 4 */] + (index >> 2);
+                                                p = (uint64_t *) b;
+                                                q = read_bin_buffer_rc;/// Bug Here
+
+                                                p_end = p + size_read_bit32_1;
+                                                v = (*p_end) ^ (*q_end_rc);/// rc
+                                                v &= popcount_mask;
+                                                count = HammingWeightDna64(v);
+
+                                                for (; p != p_end;) {
+                                                        v = (*p++) ^ (*q++);
+                                                        count += HammingWeightDna64(v);
+                                                        if (count > period) {
+                                                                ++psa;// Careful about its position
+                                                                goto psa_loop_if_rc;
+                                                        }
+                                                }
+
+                                                goto match_success;
+                                        } // psa
+                                } else {
+                                        for (;;) {
+                                                psa_loop_else_rc:
+                                                if (psa == psa_end) {
+                                                        goto loop_verification_rc;
+                                                }
+
+                                                //index = *psa - index_tmp;
+                                                // Bug here
+                                                index = *psa;
+                                                if (index < index_tmp) {
+                                                        ++psa;
+                                                        continue;
+                                                }
+                                                index -= index_tmp;
+
+                                                count  = 0;
+
+                                                b = ref_bin_ptr_array[index & 3/* mod 4 */] + (index >> 2);
+                                                p = (uint64_t *) b;
+                                                q = read_bin_buffer_rc;/// Bug Here
+
+                                                p_end = p + size_read_bit32;
+
+                                                for (; p != p_end;) {
+                                                        v = (*p++) ^ (*q++);
+                                                        count += HammingWeightDna64(v);
+                                                        if (count > period) {
+                                                                ++psa;// Careful about its position
+                                                                goto psa_loop_else_rc;
+                                                        }
+                                                }
+
+                                                goto match_success;
+                                        } // psa
+                                }
+
+                                /// loop verification
+                                loop_verification_rc:
+                                if (++i == period) {
+                                        /// Still not matched.
+                                        goto match_failure_rc;
+                                }
+                        }/* i in [0, period) */
+
+                        match_failure_rc:
+                        ++total_reads;
+
+                        rb_reads.ReadNext();/// header
+                        if (rb_reads.length_read < 1) {
+                                LOGINFO("Search done\n");
+                                break;
+                        }
+                        strcpy(head_str, rb_reads.buffer);
+                        /// strip the new line char.
+                        head_str[rb_reads.length_read] = '\0';
+
+                        rb_reads.ReadNext();/// sequence
+                        continue;
+
+                        match_success:
+                        //if (is_2nd_extend_success) { cout << "2nd-"; }
+                        ++matched_reads;
+                        ++total_reads;
+                        cout << (head_str+1) << "\t"
+                             << flag_minus_plus << "\tchr1\t"
+                             << index << "\t" << rb_reads.buffer;
+                        rb_reads.ReadNext();/// header
+                        if (rb_reads.length_read < 1) {
+                                LOGINFO("Search done\n");
+                                break;
+                        }
+                        strcpy(head_str, rb_reads.buffer);
+                        /// strip the new line char.
+                        head_str[rb_reads.length_read] = '\0';
+
+                        rb_reads.ReadNext();/// sequence
+                } /* Readings */
+
+                auto end_time_search = std::chrono::high_resolution_clock::now();
+                auto duration_search = std::chrono::duration_cast<std::chrono::milliseconds>(end_time_search-begin_time_search).count();
+                LOGINFO( "Search phase elapsed time:\t"
+                                         << duration_search
+                                         << " ms"
+                                         << std::endl);
+                LOGINFO("Reads processed:\t" << total_reads << "\n");
+                LOGINFO("Reads with alignment:\t"
+                                        << matched_reads
+                                        << " ("
+                                        << (matched_reads*100.0/total_reads)
+                                        << "%)\n");
+
+                delete[] end_array;
+                delete[] ptr_array;
+                delete[] begin_index;
+                delete[] ptr_array_rc;
 
         }
 

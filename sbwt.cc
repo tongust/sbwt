@@ -1169,13 +1169,11 @@ SecondIndex::SecondIndex(const string &prefix_filename)
         second_fin.close();
 }
 
-uint32_t SecondIndex::size_min = 50;
+uint32_t SecondIndex::size_min = 200;
 
 SecondIndex::~SecondIndex()
 {
-        if (array_ptr != nullptr) {
-                delete []array_ptr;
-        }
+        delete []array_ptr;
 }
 
 
@@ -1187,7 +1185,6 @@ void SecondIndex::RebuildIndex(BuildIndexRawData &build_index) {
         auto X = build_index.seq_raw;
         auto N = build_index.length_ref;
         auto period = build_index.period;
-        auto period_1 = period - 1;
 
         if (N <= size_seed) {
                 std::cerr << "The length is less than " << size_seed << std::endl;
@@ -1210,23 +1207,46 @@ void SecondIndex::RebuildIndex(BuildIndexRawData &build_index) {
                                         if (count >= size_min && count < 65536) {
                                                 beg0 = i - count;
                                                 end0 = i;
-                                                /// sort to get index
-                                                SortSbwt(seq, SA, beg0, end0, 0, N, 1, loop_end);
+                                                uint32_t pos_saved = SA[beg0];
 #if DEBUG_SECONDINDEX
-                                                cout << beg0 << ", " << end0 <<  "   " << count << "  " << SA[beg0] << " " << index_array << endl;
+                                                cout << "beg0: " << beg0
+                                                     << ",end0: " << end0
+                                                     <<  ",count: " << count
+                                                     << ",SA[beg0]: " << SA[beg0]
+                                                     << ",index_array: " << index_array
+                                                     << endl;
 #endif
                                                 unordered_map<uint32_t, uint16_t > mmap;
+                                                /// to restore SA[beg0, end0)
+                                                vector<uint32_t > index_backup(count,0);
                                                 uint16_t tmp0 = 0;
                                                 for (uint32_t u = beg0; u < end0; ++u) {
                                                         mmap[SA[u]] = tmp0;
+                                                        index_backup[tmp0] = SA[u];
                                                         ++tmp0;
                                                 }
 
-                                                for (uint32_t tau = 1; tau != period; ++tau) {
+                                                for (uint32_t tau = 0; tau != period; ++tau) {
                                                         depth0 = tau * size_seed;
                                                         SortSbwt(seq, SA, beg0, end0, depth0, N, 1, depth0 + size_seed);
+#if DEBUG_SECONDINDEX
                                                         for (uint32_t u = beg0; u < end0; ++u) {
-                                                                uint32_t i_shift = (u-beg0) + index_array + 3 + (tau-1)*count;
+                                                                for (uint32_t k0 = 0; k0 < loop_end; ++k0) {
+                                                                        if (k0 % period == 0) {
+                                                                                cout << "\033[1;31m" << X[(SA[u] + k0) % N] << "\033[0m";
+                                                                        }
+                                                                        else {
+                                                                                cout << X[(SA[u] + k0) % N];
+                                                                        }
+                                                                        if (k0 % size_seed == (size_seed-1)) {
+                                                                                cout << " ";
+                                                                        }
+                                                                }
+                                                                cout << endl;
+                                                        }
+#endif
+                                                        for (uint32_t u = beg0; u < end0; ++u) {
+                                                                uint32_t i_shift = (u-beg0) + index_array + 3 + tau*count;
                                                                 *(this->array_ptr + i_shift) = mmap[SA[u]];
 #if DEBUG_SECONDINDEX
                                                                 cout << *(array_ptr +i_shift) << " ";
@@ -1237,16 +1257,19 @@ void SecondIndex::RebuildIndex(BuildIndexRawData &build_index) {
 #endif
                                                 }
 
-                                                /// last sort
-                                                SortSbwt(seq, SA, beg0, end0, 0, N, 1, loop_end);
                                                 /// exchange
                                                 uint16_t *p16 = this->array_ptr + index_array;
                                                 uint32_t *p32 = (uint32_t*) p16;
-                                                *p32 = SA[beg0];
+                                                *p32 = pos_saved;
+                                                /// restore SA
+                                                for (uint32_t u = beg0; u < end0; ++u) {
+                                                        SA[u] = index_backup[u - beg0];
+                                                }
+                                                /// change the first element of SA
                                                 SA[beg0] = index_array;
                                                 *(this->array_ptr+index_array+2) = (uint16_t)count;
 
-                                                index_array += count*period_1 + 3;
+                                                index_array += count*period + 3;
                                         }
                                 }
 
@@ -1263,14 +1286,11 @@ void SecondIndex::RebuildIndex(BuildIndexRawData &build_index) {
         /// tail case
         if (count != 0) {
                 if (count >= size_min && count < 65536) {
-                        SortSbwt(seq, SA, N-count, N, 0, N, 1, loop_end);
                         beg0 = N-count;
                         end0 = N;
 #if DEBUG_SECONDINDEX
                         cout << beg0 << ", " << end0 <<  "   " << count << endl;
 #endif
-                        /// sort to get index
-                        SortSbwt(seq, SA, beg0, end0, 0, N, 1, loop_end);
                         unordered_map<uint32_t, uint16_t > mmap;
                         uint16_t tmp0 = 0;
                         for (uint32_t u = beg0; u < end0; ++u) {
@@ -1278,17 +1298,15 @@ void SecondIndex::RebuildIndex(BuildIndexRawData &build_index) {
                                 ++tmp0;
                         }
 
-                        for (uint32_t tau = 1; tau != period; ++tau) {
+                        for (uint32_t tau = 0; tau != period; ++tau) {
                                 depth0 = tau * size_seed;
                                 SortSbwt(seq, SA, beg0, end0, depth0, N, 1, depth0 + size_seed);
                                 for (uint32_t u = beg0; u < end0; ++u) {
-                                        uint32_t i_shift = (u-beg0) + index_array + 3 + (tau-1)*count;
+                                        uint32_t i_shift = (u-beg0) + index_array + 3 + tau*count;
                                         *(this->array_ptr + i_shift) = mmap[SA[u]];
                                 }
                         }
 
-                        /// last sort
-                        SortSbwt(seq, SA, beg0, end0, 0, N, 1, loop_end);
                         /// exchange
                         uint16_t *p16 = this->array_ptr + index_array;
                         uint32_t *p32 = (uint32_t*) p16;
@@ -1296,7 +1314,11 @@ void SecondIndex::RebuildIndex(BuildIndexRawData &build_index) {
                         *(this->array_ptr + index_array + 2) = (uint16_t)count;
                 }
         }
-#if DEBUG_SECONDINDEX
+
+        /*
+         * Cannot show it. Because the BuildIndexRawData is disordered.
+         */
+#if 0
         /// visualization in array
         this->PrintSecondIndex(build_index);
 #endif
@@ -1311,12 +1333,10 @@ void SecondIndex::PrintSecondIndex(BuildIndexRawData &build_index)
 
         std::string str_iter(size_seed, 0);
 
-        auto seq = build_index.seq_raw;
         auto SA = build_index.suffix_array;
         auto X = build_index.seq_raw;
         auto N = build_index.length_ref;
         auto period = build_index.period;
-        auto period_1 = period - 1;
 
         if (N <= size_seed) {
                 std::cerr << "The length is less than " << size_seed << std::endl;
@@ -1335,20 +1355,22 @@ void SecondIndex::PrintSecondIndex(BuildIndexRawData &build_index)
                                         if (count >= size_min && count < 65536) {
                                                 /// Caution: may bring into SEGERROR
                                                 /// because SA[i] in "if (str_iter[j/period] != X[(j+SA[i])%N])" is
-                                                /// changed in to index of array.
+                                                /// changed into index of array.
                                                 uint32_t beg0 = i - count - 1;
                                                 uint32_t end0 = i;
                                                 uint32_t index_array = SA[beg0];
                                                 uint16_t *p16 = this->array_ptr + index_array;
                                                 uint32_t *p32 = (uint32_t*) p16;
                                                 uint32_t pos = *p32;
-                                                cout << beg0 << ", " << end0
-                                                     << "  " << SA[beg0]
-                                                     << "  " << p16[2]
-                                                     << "  " << pos
-                                                     << "  " << period
+                                                cout << "beg0: "        << beg0
+                                                     << ",end0: "       << end0
+                                                     << ",SA[beg0]: "   << SA[beg0]
+                                                     << ",seg_size: "   << p16[2]
+                                                     << ",pos: "        << pos
+                                                     << ",period: "     << period
                                                      << endl;
                                                 uint16_t size_seg = p16[2];
+                                                cout << "Before second index" << endl;
                                                 for (uint32_t i0 = beg0; i0 < end0; ++i0) {
                                                         uint32_t p0 = SA[i0];
                                                         if (i0 == beg0) {
@@ -1365,11 +1387,15 @@ void SecondIndex::PrintSecondIndex(BuildIndexRawData &build_index)
                                                                         cout << " ";
                                                                 }
                                                         }
-                                                        cout <<endl;
+                                                        cout << endl;
                                                 }
+                                                cout << "Second index" << endl;
                                                 p16 += 3;
-                                                for (uint32_t tau = 1; tau < period; ++tau) {
-                                                        p16 += (tau-1)*size_seg;
+                                                for (uint32_t tau = 0; tau < period; ++tau) {
+                                                        cout << endl;
+                                                        for (uint32_t i0 = 0; i0 < size_seg; ++i0) {
+                                                                cout << p16[i0] << " ";
+                                                        }
                                                         cout << endl;
 
                                                         for (uint32_t i0 = 0; i0 < size_seg; ++i0) {
@@ -1389,12 +1415,9 @@ void SecondIndex::PrintSecondIndex(BuildIndexRawData &build_index)
                                                                                 cout << " ";
                                                                         }
                                                                 }
-                                                                cout <<endl;
+                                                                cout << endl;
                                                         }
-                                                        //for (uint32_t i0 = 0; i0 < size_seg; ++i0) {
-                                                        //        cout << p16[i0] << " ";
-                                                        //}
-                                                        //cout << endl;
+                                                        p16 += size_seg;
                                                 }
                                         }
                                 }
@@ -1420,6 +1443,12 @@ void SecondIndex::PrintSecondIndex(BuildIndexRawData &build_index)
 
 
 
+bool SecondIndex::Empty()
+{
+        return this->array_ptr == nullptr;
+}
+
+
 /// Init SecondIndex data structure
 void SecondIndex::RebuildIndexInit(BuildIndexRawData &build_index, uint32_t size_seed)
 {
@@ -1427,12 +1456,10 @@ void SecondIndex::RebuildIndexInit(BuildIndexRawData &build_index, uint32_t size
         std::string str_iter(size_seed, 0);
         size = 0;
 
-        auto seq = build_index.seq_raw;
         auto SA = build_index.suffix_array;
         auto X = build_index.seq_raw;
         auto N = build_index.length_ref;
         auto period = build_index.period;
-        auto period_1 = period - 1;
 
         if (N <= size_seed) {
                 std::cerr << "The length is less than " << size_seed << std::endl;
@@ -1449,8 +1476,8 @@ void SecondIndex::RebuildIndexInit(BuildIndexRawData &build_index, uint32_t size
                                 if (count != 0) {
                                         /// Sort blockwise
                                         //cout << (i - count) << "," << (i) << endl;
-                                        if (count >= size_min && count < 65536) {
-                                                size += 3 + count*period_1;
+                                        if (count >= size_min && count < 65536/* TODO */) {
+                                                size += 3 + count*period;
                                         }
                                 }
 
@@ -1467,7 +1494,7 @@ void SecondIndex::RebuildIndexInit(BuildIndexRawData &build_index, uint32_t size
         /// tail case
         if (count != 0) {
                 if (count >= size_min && count < 65536) {
-                        size += 3 + count*period_1;
+                        size += 3 + count*period;
                 }
         }
 

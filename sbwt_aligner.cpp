@@ -20,7 +20,8 @@ int main(int argc, char **argv)
         }
 
         //sbwt::UnsortedUnpackedSearch(argv);
-        sbwt::UnsortedPackedSearch(argv);
+        //sbwt::UnsortedPackedSearch(argv);
+        sbwt::SortedPackedSearch(argv);
 
         return 0;
 }

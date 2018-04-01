@@ -74,6 +74,7 @@ public:
         void RebuildIndexInit(BuildIndexRawData&, uint32_t);
         void RebuildIndex(BuildIndexRawData&);
 	void PrintSecondIndex(BuildIndexRawData&);
+        bool Empty();
 };
 
 

@@ -160,7 +160,7 @@ void CountSeedOccurrence(sbwt::BuildIndexRawData &build_index, uint32_t seed_len
 
 void PrintHelp_BuildIndex(int argc, char **argv)
 {
-        cout << "usage: build_index [period] [fa]"
+        cout << "usage: build_index [fa] [period] [size_seed]"
              << endl;
 }
 
