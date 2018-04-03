@@ -82,7 +82,7 @@ namespace sbwt
 
         void UnsortedUnpackedSearch(char **);
         void UnsortedPackedSearch(char **);
-        void SortedPackedSearch(char **);
+        void SortedPackedSearch(int argc, char **);
 } /* namespace sbwt */
 
 #endif /* SBWT_SEARCH_H */

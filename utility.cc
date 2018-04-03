@@ -174,7 +174,9 @@ void PrintHelp_CountOcc(int argc, char **argv)
 void PrintHelp_SbwtAligner(int argc, char **argv)
 {
         cout << "usage: sbwt "
-             << "[fasta file] [prefix of index files]"
+             << "[fasta file] [prefix of index files] <size of replica, default: "
+             << sbwt::SecondIndex::size_min
+             << ">"
              << endl;
 
 }

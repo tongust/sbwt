@@ -13,6 +13,7 @@
 #include "sequence_pack.h"
 #include "log.h"
 #include "alphabet.h"
+#include "utility.h"
 
 namespace sbwt
 {
@@ -1527,13 +1528,22 @@ namespace sbwt
         }
 
 
-        void SortedPackedSearch(char **argv)
+        void SortedPackedSearch(int argc, char **argv)
         {
+                LOGINFO("Sorted searching...\n");
                  /// Build index from files
                 auto begin_time_index = std::chrono::high_resolution_clock::now();
 
                 string reads_filename = string(argv[1]);
                 string prefix_filename = string(argv[2]);
+                uint32_t L_R_min = SecondIndex::size_min - 2;
+                if (argc >= 4) {
+                        uint32_t get_uint = utility::GetUint(argc, argv[3]);
+                        if (get_uint > SecondIndex::size_min) {
+                                L_R_min = get_uint;
+                        }
+                }
+                LOGINFO("Size of replica: " << L_R_min << "\n");
                 BuildIndexRawData build_index(prefix_filename);
                 /// test second index
                 SecondIndex second_index(prefix_filename);
@@ -1609,7 +1619,6 @@ namespace sbwt
 
                 /// For second index
                 /// the minimum distance between L and R
-                uint32_t L_R_min = second_index.size_min - 2;
                 uint32_t size_seed = second_index.size_seed;
                 uint32_t size_std = size_seed * period;
                 uint16_t *ptr16_right = nullptr;
@@ -1622,6 +1631,7 @@ namespace sbwt
                 uint32_t current_pos = 0;
                 uint32_t distance_2nd = 0;
                 uint32_t mid_index_2nd = 0;
+                uint32_t power_2nd_count = 0;
                 uint32_t mid_pos_2nd = 0;
                 uint16_t *ptr16_2nd_begin = second_index.array_ptr;
                 uint16_t *ptr16_2nd = nullptr;
@@ -1741,6 +1751,7 @@ namespace sbwt
 
                                 /// Use second index to power searching
                                 if (R - L > L_R_min && R-L < 65535/* TODO */) {
+                                        ++power_2nd_count;
                                         is_2nd_extend_success = false;
                                         psa = SA + L;
                                         size_range = R - L + 1;
@@ -2125,7 +2136,6 @@ namespace sbwt
                         continue;
 
                         match_success:
-                        //if (is_2nd_extend_success) { cout << "2nd-"; }
                         ++matched_reads;
                         ++total_reads;
                         cout << (head_str+1) << "\t"
@@ -2156,6 +2166,7 @@ namespace sbwt
                                         << (matched_reads*100.0/total_reads)
                                         << "%)\n");
 
+                LOGINFO("Second index powering searching: " << power_2nd_count << "\n");
                 delete[] end_array;
                 delete[] ptr_array;
                 delete[] begin_index;
