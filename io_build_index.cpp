@@ -31,9 +31,14 @@ void WriteIntoDiskBuildIndex(sbwt::BuildIndexRawData &build_index, const string 
 {
         vector<uint32_t > nums(build_index.length_ref);
         for (int i = 0; i != build_index.length_ref; ++i) {nums[i] = build_index.suffix_array[i];}
-
-        string file_array_filename = prefix_filename + ".array.sbwt";
-        string file_meta_filename = prefix_filename + ".meta.sbwt";
+        string file_array_filename = prefix_filename
+                                     + "."
+                                     + std::to_string(build_index.period)
+                                     + ".array.sbwt";
+        string file_meta_filename = prefix_filename
+                                    + "."
+                                    + std::to_string(build_index.period)
+                                    + ".meta.sbwt";
 
         std::ofstream array_fout(file_array_filename.c_str(), std::ios::binary);
         std::ofstream meta_fout(file_meta_filename.c_str(), std::ios::binary);
@@ -131,7 +136,12 @@ void WriteIntoDiskBuildSecondIndex(
                 const string &prefix_filename,
                 SecondIndex &second_index)
 {
-        string file_second_filename = prefix_filename + ".second.sbwt";
+        string file_second_filename = prefix_filename
+                                      + "."
+                                      + std::to_string(build_index.period)
+                                      + "."
+                                      + std::to_string(second_index.size_seed)
+                                      + ".second.sbwt";
         std::ofstream second_fout(file_second_filename.c_str(), std::ios::binary);
         LOGINFO("Write second index...\n");
         bool is_bigendian = currentlyBigEndian();
