@@ -151,6 +151,11 @@ void CountSeedOccurrence(sbwt::BuildIndexRawData &build_index, uint32_t seed_len
 
         } /* i */
 
+        /// tail case
+        if (count != 0) {
+
+                ++counts[count];
+        }
         for (uint32_t i = 1; i < counts.size(); ++i) {
                 if (counts[i] != 0) {
                          cout << i << "\t" << counts[i] << "\n";
