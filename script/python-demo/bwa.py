@@ -321,8 +321,8 @@ def TESTall():
 
     
 def TESTmis_1():
-    if len(argv) != 4:
-        print "usage: xx.fa begin end (only line)"
+    if len(argv) != 5:
+        print "usage: xx.fa begin end output (only line)"
         exit(1)
 
     beg = int(argv[2])
@@ -339,7 +339,7 @@ def TESTmis_1():
     z = 1
     num_tst = 100000
     mTable = ["CGT","AGT", "ACT", "ACG"]
-    mRecord = open('record.log','w')
+    mRecord = open(argv[4],'w')
     mRecord.write("len,bwa,sbwa,speedup,tests,errors\n")
     print "len speedup  bwa sbwa postivie true errors"
     for t1 in xrange(beg, end):#500
