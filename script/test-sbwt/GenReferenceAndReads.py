@@ -28,14 +28,10 @@ def generate_reads_kmer(file_name, kmer, size):
     """
 
     size0 = size
-    flag = False
     ref = ""
     with open(file_name) as mf:
         for ml in mf:
             if ml.startswith('>'):
-                if flag:
-                    break
-                flag = True
                 continue
             ref = ref + ml.rstrip(os.linesep).replace("N", "A")
     if len(ref) < kmer or size < kmer:
@@ -71,7 +67,7 @@ def CleanN_Fasta(file_name):
 
 def generate_reads_kmer_main():
     if len(argv) != 4:
-        print ("usage: " + argv[0] + " [.fa] [length (150)] [size 1024*1024] \n\r(Asumming there exits only one reads in .fa)")
+        print ("usage: " + argv[0] + " [.fa] [length (150)] [size 1024*1024]" + os.linesep)
         exit()
     kmer = int(argv[2])
     size = int(argv[3])
